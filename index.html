@@ -318,7 +318,13 @@ signInAnonymously(auth).then(async ({ user }) => {
     });
   });
 }).catch(error => {
-  onlineStatus.textContent = 'Онлайн: проверь Firebase Auth';
+  const code = String(error?.code || 'unknown');
+  onlineStatus.textContent = code === 'auth/operation-not-allowed'
+    ? 'Онлайн: включи Anonymous в Firebase Auth'
+    : code === 'auth/unauthorized-domain'
+      ? 'Онлайн: добавь домен GitHub Pages в Auth'
+      : `Онлайн: ошибка входа (${code})`;
+  onlineStatus.title = String(error?.message || code);
   console.error('Firebase anonymous sign-in failed', error);
 });
 </script>
