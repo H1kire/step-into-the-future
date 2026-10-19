@@ -17,7 +17,7 @@ state.inventory=Array.isArray(state.inventory)?state.inventory:[];state.equipmen
 state.abilityPoints=Number.isFinite(state.abilityPoints)?state.abilityPoints:Math.max(0,state.level-1);state.skillNodes=Array.isArray(state.skillNodes)?state.skillNodes:[];
 function saveGame(){try{localStorage.setItem(SAVE_KEY,JSON.stringify({state,distance,pos:lastRealGpsPos,displayPos:pos,realGps:!!lastRealGpsPos,log:Array.from($('log').children).map(p=>({text:p.textContent,kind:p.className})),monsters:monsters.map(({marker,...m})=>m)}))}catch{}}
 function scheduleSave(){clearTimeout(saveTimer);saveTimer=setTimeout(saveGame,350)}
-let devMode=false,turn='player',lastAttack=0;
+let devMode=false,turn='player',lastAttack=0,combatId=0;
 function setupPanels(){
  const aside=document.querySelector('aside');
  const playerHud=aside.querySelector(':scope > .card:first-child');playerHud.id='playerHud';playerHud.classList.add('floating-panel');document.body.append(playerHud);
@@ -25,7 +25,7 @@ function setupPanels(){
  const startLeft=Math.max(8,Math.min(365,innerWidth-365));const stats=document.createElement('section');stats.id='statsPanel';stats.className='card floating-panel hidden';stats.style.left=`${startLeft}px`;stats.style.top='74px';stats.innerHTML='<div class="panel-title"><h2>Характеристики героя</h2><button type="button" class="secondary panel-close">✕</button></div><div id="heroStats"></div>';document.body.append(stats);
  const panels=[['logPanel','log','📜 Журнал'],['bagPanel','equip','🎒 Снаряжение'],['chatPanel','chat','💬 Чат поблизости']];
  for(const [id,selector,title] of panels){const query=selector==='log'?'.log':selector==='equip'?'#bagCount':'#chatlog';const card=aside.querySelector(query).closest('.card');card.id=id;card.classList.add('floating-panel','hidden');card.style.left=`${startLeft}px`;card.style.top='74px';const bar=document.createElement('div');bar.className='panel-title';bar.innerHTML=`<h2>${title}</h2><button type="button" class="secondary panel-close">✕</button>`;card.querySelector('h2').replaceWith(bar);document.body.append(card)}
- const travel=aside.querySelector('#gpsBtn').closest('.card');travel.id='travelPanel';travel.classList.add('floating-panel');travel.style.left='12px';travel.style.bottom='12px';const combat=aside.querySelector('#enemyCard');combat.classList.add('floating-panel');combat.style.left=`${startLeft}px`;combat.style.top='74px';const combatTitle=document.createElement('div');combatTitle.className='panel-title';combatTitle.innerHTML='<h2>Обнаружен противник!</h2>';combat.querySelector('h2').replaceWith(combatTitle);
+ const travel=aside.querySelector('#gpsBtn').closest('.card');travel.id='travelPanel';travel.classList.add('floating-panel');travel.style.left='12px';travel.style.bottom='12px';const combat=aside.querySelector('#enemyCard');combat.classList.add('floating-panel');combat.style.left=`${startLeft}px`;combat.style.top='74px';const combatTitle=document.createElement('div');combatTitle.className='panel-title';combatTitle.innerHTML='<h2>Обнаружен противник!</h2><button type="button" class="secondary combat-close" aria-label="Прекратить бой и закрыть окно" title="Прекратить бой">✕</button>';combat.querySelector('h2').replaceWith(combatTitle);combatTitle.querySelector('.combat-close').addEventListener('click',closeCombat);
  tools.querySelectorAll('[data-open]').forEach(button=>button.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();const panel=$(button.dataset.open);if(!panel)return;document.querySelectorAll('#logPanel,#bagPanel,#chatPanel,#statsPanel').forEach(p=>p.classList.add('hidden'));panel.classList.remove('hidden');panel.style.zIndex='4500';if(button.dataset.open==='statsPanel')renderStats()}));
  document.querySelectorAll('.panel-close').forEach(button=>button.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();button.closest('.floating-panel').classList.add('hidden')}));
  document.querySelectorAll('.floating-panel .panel-title').forEach(bar=>{let panel=bar.closest('.floating-panel'),drag=null;bar.addEventListener('pointerdown',e=>{if(e.target.closest('button'))return;drag={x:e.clientX-panel.offsetLeft,y:e.clientY-panel.offsetTop};bar.setPointerCapture(e.pointerId)});bar.addEventListener('pointermove',e=>{if(!drag)return;panel.style.left=Math.max(0,Math.min(innerWidth-panel.offsetWidth,e.clientX-drag.x))+'px';panel.style.top=Math.max(58,Math.min(innerHeight-60,e.clientY-drag.y))+'px';panel.style.bottom='auto'});bar.addEventListener('pointerup',()=>drag=null)});
@@ -140,7 +140,11 @@ function cleanupDistantMonsters(){
  if(nearby.length!==monsters.length){monsters=nearby;scheduleSave()}
 }
 function restoreMonsters(){if(!Array.isArray(savedGame.monsters))return;for(const m of savedGame.monsters.slice(0,25)){if(!m||!Array.isArray(m.pos)||m.pos.length!==2||!m.pos.every(Number.isFinite))continue;const monster={...m};placeMonsterMarker(monster);monsters.push(monster)}}
-function selectEnemy(monster){if(enemy&&enemy!==monster&&turn==='enemy'){log('Дождись завершения хода противника.');return}enemy=monster;enemyMarker=monster.marker;turn='player';$('attackBtn').disabled=false;$('spellBtn').disabled=state.mana<15;$('enemyCard').classList.add('show');$('enemyIcon').textContent=enemy.icon;$('enemyName').textContent=enemy.name;$('enemyHint').textContent='Противник выбран';$('enemyLevel').textContent=enemy.level;$('enemyAttack').textContent=enemy.atk;$('enemyDefense').textContent=enemy.def;$('combatStatus').textContent='Твой ход.';renderEnemy();render()}
+function selectEnemy(monster){if(enemy&&enemy!==monster&&turn==='enemy'){log('Дождись завершения хода противника.');return}combatId++;enemy=monster;enemyMarker=monster.marker;turn='player';$('attackBtn').disabled=false;$('spellBtn').disabled=state.mana<15;$('enemyCard').classList.add('show');$('enemyIcon').textContent=enemy.icon;$('enemyName').textContent=enemy.name;$('enemyHint').textContent='Противник выбран';$('enemyLevel').textContent=enemy.level;$('enemyAttack').textContent=enemy.atk;$('enemyDefense').textContent=enemy.def;$('combatStatus').textContent='Твой ход.';renderEnemy();render()}
+function closeCombat(){
+ if(enemy){enemy.hp=enemy.maxHp;log(`${enemy.name} восстановил здоровье. Сражение прекращено.`);}
+ combatId++;enemy=null;enemyMarker=null;turn='player';$('enemyCard').classList.remove('show');$('attackBtn').disabled=false;$('spellBtn').disabled=state.mana<15;$('combatStatus').textContent='Сражение прекращено. Выбери противника, чтобы начать снова.';scheduleSave();
+}
 function renderEnemy(){if(!enemy)return;$('enemyHpText').textContent=`${formatGameNumber(enemy.hp)} / ${formatGameNumber(enemy.maxHp)} HP`;$('enemyHpStat').textContent=`${formatGameNumber(enemy.hp)} / ${formatGameNumber(enemy.maxHp)}`;$('enemyHpBar').style.width=Math.max(0,enemy.hp/enemy.maxHp*100)+'%'}
 function finishEnemy(){
  if(!enemy||!monsters.includes(enemy))return;
@@ -162,21 +166,22 @@ function finishEnemy(){
 }
 $('attackBtn').addEventListener('click',()=>{
  if(!enemy||turn!=='player'||Date.now()-lastAttack<1000)return;lastAttack=Date.now();turn='enemy';$('attackBtn').disabled=true;$('combatStatus').textContent='Твоя атака. Ход противника через 1 секунду…';
+ const target=enemy,activeCombat=combatId;
  const dmg= Math.max(1,totalAttack()+Math.floor(Math.random()*7)-3-(enemy.def||0));enemy.hp=Math.max(0,enemy.hp-dmg);
  log(`Ты наносишь ${formatGameNumber(dmg)} урона врагу.`,'good');
- if(enemy.hp<=0){renderEnemy();finishEnemy();return;}setTimeout(()=>{if(!enemy)return;const hit=Math.max(1,enemy.atk+Math.floor(Math.random()*5)-2-effectiveDefense());state.hp=Math.max(0,state.hp-hit);log(`${enemy.name} отвечает и наносит ${formatGameNumber(hit)} урона с учётом защиты.`,'bad');
+ if(enemy.hp<=0){renderEnemy();finishEnemy();return;}setTimeout(()=>{if(combatId!==activeCombat||enemy!==target)return;const hit=Math.max(1,target.atk+Math.floor(Math.random()*5)-2-effectiveDefense());state.hp=Math.max(0,state.hp-hit);log(`${target.name} отвечает и наносит ${formatGameNumber(hit)} урона с учётом защиты.`,'bad');
  if(state.hp<=0){state.hp=Math.max(1,effectiveMaxHp()*.35);state.coins=Math.max(0,state.coins-Math.min(5,state.coins));log('Ты отступил и восстановился у безопасного места. Здоровье частично восстановлено.','bad');}
  renderEnemy();render();$('combatStatus').textContent='Твой ход.';turn='player';$('attackBtn').disabled=false;},1000);
 });
 $('potionBtn').addEventListener('click',()=>{const maxHp=effectiveMaxHp();if(state.potions<1||state.hp>=maxHp||turn!=='player')return;state.potions--;const heal=Math.min(35,maxHp-state.hp);state.hp+=heal;log(`Зелье восстановило ${formatGameNumber(heal)} HP.`,'good');render()});
 $('spellBtn').addEventListener('click',()=>{
  if(!enemy||turn!=='player'||state.mana<15)return;
- turn='enemy';state.mana-=15;
+ const target=enemy,activeCombat=combatId;turn='enemy';state.mana-=15;
  const spellDamage=24*(1+abilityBonus('attack'));enemy.hp=Math.max(0,enemy.hp-spellDamage);
  log(`Искра наносит ${formatGameNumber(spellDamage)} урона и тратит ${formatGameNumber(15)} маны.`,'good');renderEnemy();render();
  if(enemy.hp<=0){finishEnemy();turn='player';return}
  $('attackBtn').disabled=true;$('spellBtn').disabled=true;$('combatStatus').textContent='Заклинание сработало. Ход противника через 1 секунду…';
- setTimeout(()=>{if(!enemy)return;const hit=Math.max(1,enemy.atk+Math.floor(Math.random()*5)-2-effectiveDefense());state.hp=Math.max(0,state.hp-hit);log(`${enemy.name} отвечает и наносит ${formatGameNumber(hit)} урона с учётом защиты.`,'bad');if(state.hp<=0){state.hp=Math.max(1,effectiveMaxHp()*.35);log('Ты отступил и восстановился у безопасного места.','bad')}turn='player';$('attackBtn').disabled=false;$('spellBtn').disabled=state.mana<15;$('combatStatus').textContent='Твой ход.';render()},1000)
+ setTimeout(()=>{if(combatId!==activeCombat||enemy!==target)return;const hit=Math.max(1,target.atk+Math.floor(Math.random()*5)-2-effectiveDefense());state.hp=Math.max(0,state.hp-hit);log(`${target.name} отвечает и наносит ${formatGameNumber(hit)} урона с учётом защиты.`,'bad');if(state.hp<=0){state.hp=Math.max(1,effectiveMaxHp()*.35);log('Ты отступил и восстановился у безопасного места.','bad')}turn='player';$('attackBtn').disabled=false;$('spellBtn').disabled=state.mana<15;$('combatStatus').textContent='Твой ход.';render()},1000)
 });
 $('centerBtn').addEventListener('click',()=>map.setView(pos,17));
 $('devModeBtn').addEventListener('click',e=>{devMode=!devMode;e.currentTarget.textContent=`🛠 Режим разработчика: ${devMode?'вкл.':'выкл.'} · ${devMode?'кликни по карте для телепорта':''}`;});
