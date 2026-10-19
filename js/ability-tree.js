@@ -156,6 +156,8 @@
   }
 
   function openTree() {
+    document.querySelector('#actionMenu')?.classList.add('hidden');
+    document.querySelector('#menuToggle')?.setAttribute('aria-expanded', 'false');
     document.querySelectorAll('#logPanel,#bagPanel,#chatPanel,#statsPanel,#abilityTreePanel').forEach(item => item.classList.add('hidden'));
     panel.classList.remove('hidden');
     panel.style.zIndex = '4600';
