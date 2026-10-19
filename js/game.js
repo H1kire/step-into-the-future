@@ -164,7 +164,7 @@ function spawnEnemy(force=true){
  log(`На карте появился противник: ${f.name}. Нажми на него, чтобы начать бой.`,'bad');render();
 }
 function monsterImageKey(monster){if(['slime','goblin','wolf','golem'].includes(monster?.imageKey))return monster.imageKey;const name=String(monster?.name||'').toLowerCase();if(name.includes('гоблин'))return'goblin';if(name.includes('волк'))return'wolf';if(name.includes('голем'))return'golem';return'slime'}
-function placeMonsterMarker(monster){monster.marker=L.marker(monster.pos,{icon:enemyIcon}).addTo(map);monster.marker.bindTooltip(`${monster.icon} ${monster.name}`);const markerImage=monster.marker.getElement()?.querySelector('.enemymarker');const credit=document.createElement('div');credit.className='image-credit map-image-credit';const caption=document.createElement('b');caption.textContent=monster.name||'Противник';credit.append(caption);credit.append(document.createElement('br'));monster.marker.bindPopup(credit);if(markerImage)window.GameImages?.show(markerImage,monsterImageKey(monster),monster.icon||'👾',credit);monster.marker.on('click',e=>{L.DomEvent.stopPropagation(e);selectEnemy(monster)})}
+function placeMonsterMarker(monster){monster.marker=L.marker(monster.pos,{icon:enemyIcon}).addTo(map);monster.marker.bindTooltip(`${monster.icon} ${monster.name}`);const markerImage=monster.marker.getElement()?.querySelector('.enemymarker');if(markerImage)window.GameImages?.show(markerImage,monsterImageKey(monster),monster.icon||'👾');monster.marker.on('click',e=>{L.DomEvent.stopPropagation(e);selectEnemy(monster)})}
 function cleanupDistantMonsters(){
  const nearby=[];
  for(const monster of monsters){
