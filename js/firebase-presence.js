@@ -234,9 +234,10 @@ async function saveNickname() {
     feedback.textContent = 'Ник успешно сохранён.';
   } catch (error) {
     const code = String(error?.code || '');
-    feedback.textContent = code.includes('permission-denied')
-      ? 'Firebase отклонил изменение. Опубликуй актуальные Rules; если ник уже менялся, подожди 24 часа.'
-      : `Не удалось сохранить ник: ${error?.message || code || 'ошибка Firebase'}`;
+    const message = String(error?.message || 'ошибка Firebase');
+    feedback.textContent = code.toLowerCase().includes('permission-denied') || message.toLowerCase().includes('permission_denied')
+      ? `Firebase отклонил запись (${code || message}). Опубликуй обновлённые Rules; если ник менялся за последние 24 часа, дождись окончания ограничения.`
+      : `Не удалось сохранить ник (${code || 'Firebase'}): ${message}`;
     console.error('Firebase nickname update failed', error);
   } finally {
     button.disabled = false;
