@@ -23,11 +23,8 @@
     <div class="stat"><div class="label">👣 Пройдено</div><div class="value" id="distanceText">0 м</div></div>
   </div>
 </section>
-<section class="card">
-<h2>Путешествие</h2>
-<div class="actions"><button class="primary" id="gpsBtn">🛰 Подключить GPS</button><button class="secondary" id="demoBtn">🚶 Демо-прогулка</button></div>
-<button class="secondary full" id="devModeBtn" style="margin-top:8px">🛠 Режим разработчика: выкл.</button>
-<div class="status" id="gpsStatus">Разреши доступ к геопозиции, чтобы персонаж двигался вместе с тобой. Можно играть и в демо-режиме.</div>
+<section class="card" id="devToolsCard">
+<button class="secondary full" id="devModeBtn">🛠 Режим разработчика: выкл.</button>
 </section>
 <section class="card enemy" id="enemyCard">
 <h2>Обнаружен противник!</h2>
@@ -48,7 +45,7 @@
 </div>
 <section class="card floating-panel hidden item-detail-panel" id="itemDetailPanel" aria-live="polite"><div class="panel-title"><h2 id="itemDetailTitle">Предмет</h2><button type="button" class="secondary panel-close" aria-label="Закрыть информацию о предмете">✕</button></div><div class="item-detail-image" id="itemDetailImage">🎒</div><div id="itemImageCredit" class="image-credit"></div><div id="itemDetailRarity"></div><div id="itemDetailBody"></div></section>
 <section id="gpsGate" class="gps-gate" role="dialog" aria-modal="true" aria-labelledby="gpsGateTitle">
- <div class="gps-gate-card"><div class="gps-gate-icon">📍</div><h1 id="gpsGateTitle">Для игры нужен GPS</h1><p>Разреши браузеру доступ к геопозиции и дождись определения координат. До этого игровой экран останется закрыт.</p><button type="button" class="primary" id="gpsGateBtn">Разрешить GPS и войти в игру</button><p class="gps-gate-status" id="gpsGateStatus" aria-live="polite"></p></div>
+ <div class="gps-gate-card"><div class="gps-gate-icon">📍</div><h1 id="gpsGateTitle">Для игры нужен GPS</h1><p>Разреши браузеру доступ к геопозиции и дождись точного определения координат. До этого игровой экран останется закрыт.</p><button type="button" class="primary" id="gpsGateBtn">Разрешить GPS и войти в игру</button><p class="gps-gate-status" id="gpsGateStatus" aria-live="polite"></p></div>
 </section>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="./js/game-images.js"></script>
