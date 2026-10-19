@@ -25,6 +25,7 @@ function setupPanels(){
  const aside=document.querySelector('aside');
  const playerHud=aside.querySelector(':scope > .card:first-child');playerHud.id='playerHud';playerHud.classList.add('floating-panel');document.body.append(playerHud);
  const merchantPanel=aside.querySelector('#merchantPanel');merchantPanel.style.left=innerWidth<=780?'8px':`${Math.max(12,(innerWidth-430)/2)}px`;merchantPanel.style.top=innerWidth<=780?'8vh':'12vh';merchantPanel.style.transform='none';
+ const itemDetailPanel=$('itemDetailPanel');itemDetailPanel.style.left=innerWidth<=780?'8px':`${Math.max(12,(innerWidth-340)/2)}px`;itemDetailPanel.style.top='18vh';itemDetailPanel.style.transform='none';
  const tools=document.createElement('div');tools.className='hud-tools';tools.innerHTML='<button type="button" class="secondary" data-open="statsPanel">📊 Герой</button><button type="button" class="secondary" data-open="logPanel">📜 Журнал</button><button type="button" class="secondary" data-open="bagPanel">🎒 Снаряжение</button><button type="button" class="secondary" data-open="chatPanel">💬 Чат</button>';document.body.append(tools);
  const startLeft=Math.max(8,Math.min(365,innerWidth-365));const stats=document.createElement('section');stats.id='statsPanel';stats.className='card floating-panel hidden';stats.style.left=`${startLeft}px`;stats.style.top='74px';stats.innerHTML='<div class="panel-title"><h2>Характеристики героя</h2><button type="button" class="secondary panel-close">✕</button></div><div id="heroStats"></div>';document.body.append(stats);
  const panels=[['logPanel','log','📜 Журнал'],['bagPanel','equip','🎒 Снаряжение'],['chatPanel','chat','💬 Чат поблизости']];
@@ -57,7 +58,22 @@ window.GameAPI={
  purchaseSkillNode(node){if(!node||typeof node.id!=='string'||!Number.isInteger(node.cost)||node.cost<1||state.skillNodes.includes(node.id)||state.abilityPoints<node.cost)return false;const hpBefore=effectiveMaxHp(),manaBefore=effectiveMaxMana();state.abilityPoints-=node.cost;state.skillNodes.push(node.id);state.hp=Math.min(effectiveMaxHp(),state.hp+effectiveMaxHp()-hpBefore);state.mana=Math.min(effectiveMaxMana(),state.mana+effectiveMaxMana()-manaBefore);render();return true},
  refresh(){render()}
 };
-function renderBag(){ $('equipSlots').innerHTML=slots.map(s=>`<div class="slot" data-equip="${s}">${s}<b>${state.equipment[s]?.name||'—'}</b></div>`).join('');$('inventorySlots').innerHTML=Array.from({length:Math.max(24+(state.bagBonus||0),state.inventory.length)},(_,i)=>{const x=state.inventory[i];return `<div class="slot ${x?'rarity-'+x.key:''}" data-item="${i}">${i+1}<b>${x?x.name:'Пусто'}</b></div>`}).join('');$('bagCount').textContent=`Рюкзак · ${24+(state.bagBonus||0)} слотов · ${state.inventory.length} предметов`;document.querySelectorAll('#inventorySlots [data-item]').forEach(el=>el.draggable=!!state.inventory[Number(el.dataset.item)]);scheduleSave()}
+function renderBag(){ $('equipSlots').innerHTML=slots.map(s=>{const item=state.equipment[s];return `<div class="slot ${item?'rarity-'+item.key:''}" data-equip="${s}" tabindex="${item?'0':'-1'}" role="${item?'button':'presentation'}">${s}<b>${item?.name||'—'}</b></div>`}).join('');$('inventorySlots').innerHTML=Array.from({length:Math.max(24+(state.bagBonus||0),state.inventory.length)},(_,i)=>{const x=state.inventory[i];return `<div class="slot ${x?'rarity-'+x.key:''}" data-item="${i}" tabindex="${x?'0':'-1'}" role="${x?'button':'presentation'}">${i+1}<b>${x?x.name:'Пусто'}</b></div>`}).join('');$('bagCount').textContent=`Рюкзак · ${24+(state.bagBonus||0)} слотов · ${state.inventory.length} предметов`;document.querySelectorAll('#inventorySlots [data-item]').forEach(el=>el.draggable=!!state.inventory[Number(el.dataset.item)]);scheduleSave()}
+function openItemDetails(item,equipped=false){
+ if(!item)return;
+ const rarity=rarities.find(([,key])=>key===item.key)||rarities[0];
+ $('itemDetailTitle').textContent=item.name||item.type||'Предмет';
+ const rarityTag=$('itemDetailRarity');rarityTag.className=`item-detail-rarity rarity-${rarity[1]}`;rarityTag.textContent=`${rarity[0]} редкость · ${equipped?'Экипировано':'В инвентаре'}`;
+ const body=$('itemDetailBody');body.replaceChildren();
+ const info=document.createElement('p');info.className='sub';info.textContent=`Тип: ${item.type||'Предмет экипировки'}. ${equipped?'Предмет надет на персонажа.':'Перетащи предмет в соответствующий слот, чтобы надеть.'}`;body.append(info);
+ const stats=[];
+ if(item.attackBonus)stats.push(`Атака: +${formatGameNumber(item.attackBonus)}`);
+ if(item.defenseBonus)stats.push(`Защита: +${formatGameNumber(item.defenseBonus)}`);
+ if(item.type==='Рюкзак')stats.push(`Вместимость: +${formatGameNumber(item.bagBonus||8)} слотов`);
+ if(!stats.length)stats.push('Дополнительных характеристик нет.');
+ const list=document.createElement('ul');list.className='item-detail-stats';stats.forEach(text=>{const line=document.createElement('li');line.textContent=text;list.append(line)});body.append(list);
+ const panel=$('itemDetailPanel');panel.classList.remove('hidden');panel.style.zIndex='4700';
+}
 function syncPeer(){if(channel&&gpsAllowed&&gpsPositionReady)channel.postMessage({type:'presence',id:playerId,pos,name:'Странник',at:Date.now()})}
 function syncOnline(){if(gpsAllowed&&gpsPositionReady&&lastRealGpsPos)window.dispatchEvent(new CustomEvent('game:position',{detail:{lat:lastRealGpsPos[0],lng:lastRealGpsPos[1],name:'Странник'}}))}
 if(channel)channel.onmessage=e=>{const m=e.data;if(!m||m.id===playerId)return;if(m.type==='presence'){peers[m.id]=m;if(map.distance(pos,m.pos)<=1000){if(!peerMarkers[m.id])peerMarkers[m.id]=L.marker(m.pos,{icon:L.divIcon({className:'',html:'<div class="marker youmarker">🧝</div>',iconSize:[42,42],iconAnchor:[21,21]})}).addTo(map).bindPopup(m.name);else peerMarkers[m.id].setLatLng(m.pos)}else if(peerMarkers[m.id]){map.removeLayer(peerMarkers[m.id]);delete peerMarkers[m.id]}renderChatPeers()}if(m.type==='chat'&&peers[m.id]&&map.distance(pos,peers[m.id].pos)<=150)addChat(m.name+': '+m.text)};
@@ -179,6 +195,7 @@ function salePrice(item){const rarityIndex=Math.max(0,rarities.findIndex(([,key]
 function renderMerchantShop(){
  const near=merchantDistance()<=200;
  $('merchantDistance').textContent=Number.isFinite(merchantDistance())?`До торговца: ${formatGameNumber(merchantDistance())} м. Для торговли подойди на 200 м.`:'Торговец пока не найден.';
+ $('merchantWallet').textContent=`У тебя: ${formatGameNumber(state.coins)} 🪙`;
  const goods=$('merchantGoods');goods.replaceChildren();
  const appendOffer=(label,price,id,disabled=false)=>{const row=document.createElement('div');row.className='shop-row';const name=document.createElement('span');name.textContent=label;const button=document.createElement('button');button.type='button';button.className='primary';button.dataset.buy=id;button.textContent=`Купить · ${formatGameNumber(price)} 🪙`;button.disabled=disabled;row.append(name,button);goods.append(row)};
  appendOffer(`🧪 Зелье здоровья · ${state.potions}/10`,100,'potion',!near||state.coins<100||state.potions>=10);
@@ -265,14 +282,17 @@ document.addEventListener('pointerup',e=>{
  if(dragged.dataset.dragIndex!==undefined){
   const index=Number(dragged.dataset.dragIndex),item=state.inventory[index];if(!item)return;
   if(target?.closest('#trashSlot')){state.inventory.splice(index,1);renderBag();render();log(`Удалён предмет: ${item.name}.`,'bad');return;}
+  const sameItem=target?.closest('[data-item]');if(sameItem&&Number(sameItem.dataset.item)===index){openItemDetails(item);return;}
   const equip=target?.closest('[data-equip]');if(!equip||equip.dataset.equip!==item.type)return;
   const old=state.equipment[item.type];state.equipment[item.type]=item;state.inventory.splice(index,1);if(item.type==='Рюкзак'&&!old)state.bagBonus=(state.bagBonus||0)+8;if(old)state.inventory.push(old);renderBag();render();log(`Надето: ${item.name}.`,'good');
  }else if(dragged.dataset.dragEquip){
-  const bag=target?.closest('#inventorySlots'),type=dragged.dataset.dragEquip,item=state.equipment[type];if(!bag||!item||state.inventory.length>=24+(state.bagBonus||0))return;
+  const type=dragged.dataset.dragEquip,item=state.equipment[type];if(target?.closest('[data-equip]')?.dataset.equip===type){openItemDetails(item,true);return;}
+  const bag=target?.closest('#inventorySlots');if(!bag||!item||state.inventory.length>=24+(state.bagBonus||0))return;
   state.inventory.push(item);delete state.equipment[type];if(type==='Рюкзак')state.bagBonus=Math.max(0,(state.bagBonus||0)-8);renderBag();render();log(`Снято: ${item.name}.`);
  }
 });
 document.addEventListener('pointermove',e=>{if(!document.querySelector('.slot.dragging'))return;const over=document.elementFromPoint(e.clientX,e.clientY)?.closest('#trashSlot');$('trashSlot').classList.toggle('drop-target',!!over)});
+document.addEventListener('keydown',event=>{if(event.key!=='Enter'&&event.key!==' ')return;const slot=event.target.closest?.('[data-item],[data-equip]');if(!slot)return;const item=slot.dataset.item!==undefined?state.inventory[Number(slot.dataset.item)]:state.equipment[slot.dataset.equip];if(item){event.preventDefault();openItemDetails(item,slot.dataset.equip!==undefined)}});
 function gpsErrorText(error){if(error.code===1)return'Доступ к геопозиции запрещён. Разреши его в настройках сайта в браузере и нажми кнопку ещё раз.';if(error.code===2)return'Устройство пока не определило координаты. Включи геолокацию телефона и попробуй ещё раз.';return'Не удалось получить координаты вовремя. Проверь GPS и попробуй ещё раз.'}
 function unlockGame(){gpsAllowed=true;document.body.classList.remove('site-locked');$('gpsGate').classList.add('hidden');requestAnimationFrame(()=>map.invalidateSize())}
 function requestGpsAccess(fromGate=false,permissionAlreadyGranted=false){

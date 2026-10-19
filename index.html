@@ -40,12 +40,13 @@
 <section class="card"><h2>Журнал приключений</h2><div class="log" id="log"><p>Мир ждёт своего исследователя. Выйди на прогулку и найди первого врага!</p></div></section>
 <section class="card"><h2>Снаряжение</h2><div class="sub" id="bagCount">Рюкзак · 24 слота</div><div class="equip" id="equipSlots"></div><div class="inventory" id="inventorySlots"></div><div class="trash-slot" id="trashSlot" aria-label="Мусорка: перетащи сюда предмет, чтобы удалить">🗑 Мусорка · перетащи предмет сюда, чтобы удалить</div></section>
 <section class="card"><h2>Чат поблизости · 150 м</h2><div class="chatlog" id="chatlog"><p>Игроки поблизости появятся здесь (1000 м).</p></div><div class="chatrow"><input id="chatInput" maxlength="180" placeholder="Сообщение"><button class="primary" id="chatSend">➤</button></div></section>
-<section class="card floating-panel hidden merchant-panel" id="merchantPanel"><div class="panel-title"><h2>Дружественный торговец</h2><button type="button" class="secondary panel-close" aria-label="Закрыть торговца">✕</button></div><div class="status" id="merchantDistance"></div><h3>Купить</h3><div id="merchantGoods"></div><h3>Продать</h3><div id="merchantSellList"></div></section>
+<section class="card floating-panel hidden merchant-panel" id="merchantPanel"><div class="panel-title"><h2>Дружественный торговец</h2><button type="button" class="secondary panel-close" aria-label="Закрыть торговца">✕</button></div><div class="status" id="merchantDistance"></div><div class="merchant-wallet" id="merchantWallet"></div><h3>Купить</h3><div id="merchantGoods"></div><h3>Продать</h3><div id="merchantSellList"></div></section>
 <footer>Демо-прототип. Координаты передаются в Firebase для показа игроков рядом; игровой прогресс хранится в браузере.</footer>
 </aside>
 <div class="mapwrap"><div id="map"></div><div class="mapbadge">📍 <b id="mapState">Ожидание координат</b><br><span id="coords">Карта загружена</span></div><div class="mapbuttons"><button class="secondary" id="centerBtn">🎯 К персонажу</button></div></div>
 </main>
 </div>
+<section class="card floating-panel hidden item-detail-panel" id="itemDetailPanel" aria-live="polite"><div class="panel-title"><h2 id="itemDetailTitle">Предмет</h2><button type="button" class="secondary panel-close" aria-label="Закрыть информацию о предмете">✕</button></div><div id="itemDetailRarity"></div><div id="itemDetailBody"></div></section>
 <section id="gpsGate" class="gps-gate" role="dialog" aria-modal="true" aria-labelledby="gpsGateTitle">
  <div class="gps-gate-card"><div class="gps-gate-icon">📍</div><h1 id="gpsGateTitle">Для игры нужен GPS</h1><p>Разреши браузеру доступ к геопозиции и дождись определения координат. До этого игровой экран останется закрыт.</p><button type="button" class="primary" id="gpsGateBtn">Разрешить GPS и войти в игру</button><p class="gps-gate-status" id="gpsGateStatus" aria-live="polite"></p></div>
 </section>
