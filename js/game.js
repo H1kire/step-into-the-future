@@ -8,11 +8,12 @@ const merchantIcon=L.divIcon({className:'',html:'<div class="marker merchantmark
 const SAVE_KEY='gorodskie-stranniki-save-v1';
 function readSave(){try{return JSON.parse(localStorage.getItem(SAVE_KEY)||'null')||{}}catch{return{}}}
 const savedGame=readSave();
+// Saved coordinates are only a visual hint and can become stale (for example after
+// restoring a backup or moving countries). Never use them as the current GPS fix.
 let pos=[50.4501,30.5234];
-if(Array.isArray(savedGame.displayPos)&&savedGame.displayPos.length===2&&savedGame.displayPos.every(Number.isFinite))pos=savedGame.displayPos;else if(savedGame.realGps&&Array.isArray(savedGame.pos)&&savedGame.pos.length===2&&savedGame.pos.every(Number.isFinite))pos=savedGame.pos;
 map.setView(pos,15);
 let playerMarker=L.marker(pos,{icon:playerIcon}).addTo(map).bindPopup('Ты здесь — Странник');
-let enemyMarker=null, enemy=null, monsters=[],gpsWatch=null, distance=Number.isFinite(savedGame.distance)?savedGame.distance:0,lastPos=null,gpsAllowed=false,gpsPositionReady=false,gpsFixReady=false,gpsInitialCentered=false,lastRealGpsPos=savedGame.realGps&&Array.isArray(savedGame.pos)?savedGame.pos:null,lastGpsPos=null,lastGpsAt=0,lastGpsAccuracy=0,gpsCandidate=null,gpsCandidateCount=0,saveTimer=null;
+let enemyMarker=null, enemy=null, monsters=[],gpsWatch=null, distance=Number.isFinite(savedGame.distance)?savedGame.distance:0,lastPos=null,gpsAllowed=false,gpsPositionReady=false,gpsFixReady=false,gpsInitialCentered=false,lastRealGpsPos=null,lastGpsPos=null,lastGpsAt=0,lastGpsAccuracy=0,gpsCandidate=null,gpsCandidateCount=0,saveTimer=null;
 let state={level:1,xp:0,hp:100,maxHp:100,coins:0,potions:1,attack:12,defense:0,encounters:0,...(savedGame.state||{})};
 let merchantPos=Array.isArray(savedGame.merchantPos)&&savedGame.merchantPos.length===2&&Number.isFinite(savedGame.merchantPos[0])&&Number.isFinite(savedGame.merchantPos[1])&&Math.abs(savedGame.merchantPos[0])<=90&&Math.abs(savedGame.merchantPos[1])<=180?savedGame.merchantPos:null,merchantMarker=null;
 state.inventory=Array.isArray(state.inventory)?state.inventory:[];state.equipment=state.equipment&&typeof state.equipment==='object'?state.equipment:{};state.energy=Number.isFinite(state.energy)?state.energy:(Number.isFinite(state.mana)?state.mana:50);state.maxEnergy=Number.isFinite(state.maxEnergy)?state.maxEnergy:(Number.isFinite(state.maxMana)?state.maxMana:50);delete state.mana;delete state.maxMana;
@@ -135,14 +136,13 @@ function updatePos(latlng,source='GPS'){
  let ignoreGpsDistance=false;
  const next=[latlng.lat,latlng.lng];
  if(source==='GPS'){
-  const accuracy=Number(latlng.accuracy);if(!Number.isFinite(accuracy)||accuracy>150){gpsCandidate=null;gpsCandidateCount=0;$('gpsHead').textContent='Слабый GPS';$('gpsGateStatus').textContent=`Слабый сигнал GPS (точность ±${Number.isFinite(accuracy)?Math.round(accuracy):'—'} м). Включи точную геопозицию телефона и подожди более точный сигнал.`;return false}
+  const accuracy=Number(latlng.accuracy);if(!Number.isFinite(accuracy)||accuracy>250){gpsCandidate=null;gpsCandidateCount=0;$('gpsHead').textContent='Слабый GPS';$('gpsGateStatus').textContent=`Слабый сигнал GPS (точность ±${Number.isFinite(accuracy)?Math.round(accuracy):'—'} м). Включи точную геопозицию телефона и подожди более точный сигнал.`;return false}
+  if(Number.isFinite(latlng.timestamp)&&Date.now()-latlng.timestamp>60000){gpsCandidate=null;gpsCandidateCount=0;$('gpsHead').textContent='Устаревшие координаты';$('gpsGateStatus').textContent='Телефон прислал старое местоположение. Жду новое измерение GPS…';return false}
   const now=Date.now();
   if(!gpsFixReady){
-   const farFromSaved=!!(lastRealGpsPos&&map.distance(lastRealGpsPos,next)>100000);
-   if(farFromSaved&&accuracy>120){gpsCandidate=null;gpsCandidateCount=0;$('gpsHead').textContent='Проверяем GPS';$('gpsGateStatus').textContent=`Новое место далеко от сохранённого. Жду более точные GPS-измерения (сейчас ±${Math.round(accuracy)} м).`;return false}
-   const candidateRadius=farFromSaved?75:150,requiredSamples=farFromSaved?3:2;
+   const candidateRadius=150,requiredSamples=2;
    if(gpsCandidate&&map.distance(gpsCandidate,next)<=candidateRadius)gpsCandidateCount++;else{gpsCandidate=next;gpsCandidateCount=1}
-   if(gpsCandidateCount<requiredSamples){$('gpsHead').textContent='Проверяем GPS';$('gpsGateStatus').textContent=farFromSaved?'Новое место далеко от сохранённого. Проверяю ещё несколько совпадающих GPS-измерений…':'Проверяю точность координат; жду ещё одно совпадающее измерение…';return false}
+   if(gpsCandidateCount<requiredSamples){$('gpsHead').textContent='Проверяем GPS';$('gpsGateStatus').textContent='Проверяю точность координат; жду ещё одно совпадающее измерение…';return false}
    gpsCandidate=null;gpsCandidateCount=0;
   }else{
    const jump=map.distance(lastGpsPos||pos,next),elapsed=Math.max(1,(now-(lastGpsAt||now))/1000),maxPlausible=Math.max(120,elapsed*50+accuracy+lastGpsAccuracy),staleFix=elapsed>180&&accuracy<=100,suspiciousJump=jump>100000||jump>maxPlausible;let confirmedJump=false;
@@ -320,7 +320,7 @@ function lockGameForGps(message){gpsAllowed=false;gpsPositionReady=false;gpsFixR
 function handleGpsError(error,retryWatch=false){const message=gpsErrorText(error);if(error.code===1){lockGameForGps(message);return}if(gpsAllowed){$('gpsHead').textContent='Ищем GPS-сигнал…';return}document.body.classList.add('site-locked');$('gpsGate').classList.remove('hidden');$('gpsHead').textContent='Ожидание GPS';$('gpsGateStatus').textContent=message;$('gpsGateBtn').disabled=false;$('gpsGateBtn').textContent='🔄 Повторить проверку GPS';if(retryWatch)startGpsWatch()}
 function unlockGame(){if(!gpsPositionReady)return;const firstUnlock=!gpsAllowed;gpsAllowed=true;document.body.classList.remove('site-locked');$('gpsGate').classList.add('hidden');$('gpsGateStatus').textContent='';requestAnimationFrame(()=>map.invalidateSize());if(firstUnlock){if(monsters.length===0)spawnEnemy(false);updateMerchantForPosition();syncPeer();syncOnline()}}
 const gpsOptions={enableHighAccuracy:true,maximumAge:0,timeout:30000};
-function acceptGpsFix(position){const valid=updatePos({lat:position.coords.latitude,lng:position.coords.longitude,accuracy:position.coords.accuracy},'GPS');if(valid&&gpsPositionReady){unlockGame();map.setView(pos,Math.max(map.getZoom(),17));map.invalidateSize();return true}if(!gpsPositionReady){$('gpsHead').textContent='Проверяем GPS';$('gpsGateStatus').textContent=$('gpsGateStatus').textContent||'Получаю несколько точных измерений GPS…';$('gpsGateBtn').disabled=false;$('gpsGateBtn').textContent='Ожидаем точный GPS…'}return false}
+function acceptGpsFix(position){const valid=updatePos({lat:position.coords.latitude,lng:position.coords.longitude,accuracy:position.coords.accuracy,timestamp:position.timestamp},'GPS');if(valid&&gpsPositionReady){unlockGame();map.setView(pos,Math.max(map.getZoom(),17));map.invalidateSize();return true}if(!gpsPositionReady){$('gpsHead').textContent='Проверяем GPS';$('gpsGateStatus').textContent=$('gpsGateStatus').textContent||'Получаю несколько точных измерений GPS…';$('gpsGateBtn').disabled=false;$('gpsGateBtn').textContent='Ожидаем точный GPS…'}return false}
 function startGpsWatch(){if(gpsWatch!==null)navigator.geolocation.clearWatch(gpsWatch);gpsWatch=navigator.geolocation.watchPosition(acceptGpsFix,error=>handleGpsError(error),gpsOptions)}
 function requestGpsAccess(fromGate=false,permissionAlreadyGranted=false){
  const gateStatus=$('gpsGateStatus');if(!navigator.geolocation){lockGameForGps('Этот браузер не поддерживает геолокацию. Открой игру в браузере с поддержкой GPS.');return}

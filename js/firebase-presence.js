@@ -220,10 +220,12 @@ async function saveNickname() {
   button.disabled = true;
   button.textContent = 'Сохраняем…';
   feedback.textContent = '';
+  let step = 'проверка профиля';
   try {
     const snapshot = await get(profileRef);
     let profile = snapshot.val();
     if (!profile) {
+      step = 'создание профиля';
       profile = await ensureAccountProfile(user);
       chatName = profile.nickname || `user${profile.accountNumber}`;
       if (lastPosition) lastPosition.name = chatName;
@@ -231,10 +233,12 @@ async function saveNickname() {
       watchProfile(user);
     }
     if (nickname === profile.nickname) { feedback.textContent = 'Этот ник уже установлен.'; setNicknameEditor(false); return; }
+    step = 'проверка времени смены ника';
     const offsetSnapshot = await get(ref(database, '.info/serverTimeOffset'));
     const serverNow = Date.now() + (Number(offsetSnapshot.val()) || 0);
     const remaining = 86400000 - (serverNow - (profile.nicknameChangedAt || 0));
     if (remaining > 0) { feedback.textContent = `Ник можно менять через ${Math.ceil(remaining / 3600000)} ч.`; return; }
+    step = 'запись ника в Firebase';
     await update(profileRef, { nickname, nicknameChangedAt: serverTimestamp() });
     setNicknameEditor(false);
     feedback.textContent = 'Ник успешно сохранён.';
@@ -243,7 +247,7 @@ async function saveNickname() {
     const message = String(error?.message || 'ошибка Firebase');
     feedback.textContent = code.toLowerCase().includes('permission-denied') || message.toLowerCase().includes('permission_denied')
       ? `Firebase отклонил запись (${code || message}). Опубликуй обновлённые Rules; если ник менялся за последние 24 часа, дождись окончания ограничения.`
-      : `Не удалось сохранить ник (${code || 'Firebase'}): ${message}`;
+      : `Не удалось сохранить ник на этапе «${step}» (${code || 'Firebase'}): ${message}`;
     console.error('Firebase nickname update failed', error);
   } finally {
     button.disabled = false;
