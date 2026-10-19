@@ -132,29 +132,27 @@ function render(){
 }
 function updatePos(latlng,source='GPS'){
  const hadPosition=gpsPositionReady;
+ let ignoreGpsDistance=false;
  const next=[latlng.lat,latlng.lng];
  if(source==='GPS'){
-  const accuracy=Number(latlng.accuracy);if(!Number.isFinite(accuracy)||accuracy>100){gpsCandidate=null;gpsCandidateCount=0;$('gpsHead').textContent='Слабый GPS';$('gpsGateStatus').textContent=`Слабый сигнал GPS (точность ±${Number.isFinite(accuracy)?Math.round(accuracy):'—'} м). Включи точную геопозицию телефона и подожди более точный сигнал.`;return false}
+  const accuracy=Number(latlng.accuracy);if(!Number.isFinite(accuracy)||accuracy>150){gpsCandidate=null;gpsCandidateCount=0;$('gpsHead').textContent='Слабый GPS';$('gpsGateStatus').textContent=`Слабый сигнал GPS (точность ±${Number.isFinite(accuracy)?Math.round(accuracy):'—'} м). Включи точную геопозицию телефона и подожди более точный сигнал.`;return false}
   const now=Date.now();
   if(!gpsFixReady){
    const farFromSaved=!!(lastRealGpsPos&&map.distance(lastRealGpsPos,next)>100000);
-   if(farFromSaved&&accuracy>60){gpsCandidate=null;gpsCandidateCount=0;$('gpsHead').textContent='Проверяем GPS';$('gpsGateStatus').textContent=`Новое место далеко от сохранённого. Жду более точные GPS-измерения (сейчас ±${Math.round(accuracy)} м).`;return false}
+   if(farFromSaved&&accuracy>120){gpsCandidate=null;gpsCandidateCount=0;$('gpsHead').textContent='Проверяем GPS';$('gpsGateStatus').textContent=`Новое место далеко от сохранённого. Жду более точные GPS-измерения (сейчас ±${Math.round(accuracy)} м).`;return false}
    const candidateRadius=farFromSaved?75:150,requiredSamples=farFromSaved?3:2;
    if(gpsCandidate&&map.distance(gpsCandidate,next)<=candidateRadius)gpsCandidateCount++;else{gpsCandidate=next;gpsCandidateCount=1}
    if(gpsCandidateCount<requiredSamples){$('gpsHead').textContent='Проверяем GPS';$('gpsGateStatus').textContent=farFromSaved?'Новое место далеко от сохранённого. Проверяю ещё несколько совпадающих GPS-измерений…':'Проверяю точность координат; жду ещё одно совпадающее измерение…';return false}
    gpsCandidate=null;gpsCandidateCount=0;
   }else{
-   const jump=map.distance(lastGpsPos||pos,next),elapsed=Math.max(1,(now-(lastGpsAt||now))/1000),maxPlausible=Math.max(120,elapsed*50+accuracy+lastGpsAccuracy);
-   if(jump>100000||jump>maxPlausible){$('gpsHead').textContent='Проверяем GPS';$('gpsGateStatus').textContent='GPS сообщил резкий скачок координат. Игнорирую его и жду подтверждённое местоположение.';gpsCandidate=null;gpsCandidateCount=0;return false}
-   const movementThreshold=Math.max(15,Math.min(30,accuracy*.8+lastGpsAccuracy*.4));
-   if(jump<movementThreshold){gpsCandidate=null;gpsCandidateCount=0;lastGpsAccuracy=accuracy;return true}
-   if(gpsCandidate&&map.distance(gpsCandidate,next)<=25)gpsCandidateCount++;else{gpsCandidate=next;gpsCandidateCount=1}
-   if(gpsCandidateCount<2){$('gpsHead').textContent='Проверяем GPS';$('gpsGateStatus').textContent='Проверяю движение телефона по GPS…';return true}
-   gpsCandidate=null;gpsCandidateCount=0;
+   const jump=map.distance(lastGpsPos||pos,next),elapsed=Math.max(1,(now-(lastGpsAt||now))/1000),maxPlausible=Math.max(120,elapsed*50+accuracy+lastGpsAccuracy),staleFix=elapsed>180&&accuracy<=100,suspiciousJump=jump>100000||jump>maxPlausible;let confirmedJump=false;
+   if(suspiciousJump&&!staleFix){const required=jump>100000?3:2,radius=Math.max(35,Math.min(100,accuracy*.75+lastGpsAccuracy*.5));if(gpsCandidate&&map.distance(gpsCandidate,next)<=radius)gpsCandidateCount++;else{gpsCandidate=next;gpsCandidateCount=1}if(gpsCandidateCount<required){$('gpsHead').textContent='Проверяем GPS';$('gpsGateStatus').textContent='GPS сообщил резкий скачок. Проверяю несколько совпадающих измерений, игра остаётся открытой.';return true}gpsCandidate=null;gpsCandidateCount=0;ignoreGpsDistance=true;confirmedJump=true}
+   if(staleFix&&suspiciousJump){ignoreGpsDistance=true;confirmedJump=true}
+   if(!confirmedJump){const movementThreshold=Math.max(15,Math.min(30,accuracy*.8+lastGpsAccuracy*.4));if(jump<movementThreshold){gpsCandidate=null;gpsCandidateCount=0;lastGpsAccuracy=accuracy;return true}if(gpsCandidate&&map.distance(gpsCandidate,next)<=25)gpsCandidateCount++;else{gpsCandidate=next;gpsCandidateCount=1}if(gpsCandidateCount<2){$('gpsHead').textContent='Проверяем GPS';$('gpsGateStatus').textContent='Проверяю движение телефона по GPS…';return true}gpsCandidate=null;gpsCandidateCount=0}
   }
   lastGpsAt=now;lastGpsAccuracy=accuracy;lastRealGpsPos=next;gpsFixReady=true;
  }
- const distanceFrom=source==='GPS'?lastGpsPos:null;if(distanceFrom){const d=map.distance(distanceFrom,next);if(d<100000)distance+=d;}
+ const distanceFrom=source==='GPS'&&!ignoreGpsDistance?lastGpsPos:null;if(distanceFrom){const d=map.distance(distanceFrom,next);if(d<100000)distance+=d;}
  if(source==='GPS')lastGpsPos=next;
  lastPos=next;pos=next;gpsPositionReady=true;playerMarker.setLatLng(pos);renderChatPeers();if(source==='GPS'&&!gpsInitialCentered){map.setView(pos,Math.max(map.getZoom(),16));gpsInitialCentered=true}
  cleanupDistantMonsters();
@@ -317,18 +315,19 @@ document.addEventListener('pointermove',e=>{const scroll=activeInventoryScroll;i
 document.addEventListener('pointerup',e=>{if(activeInventoryScroll?.pointerId===e.pointerId)activeInventoryScroll=null});
 document.addEventListener('pointercancel',e=>{if(activeInventoryScroll?.pointerId===e.pointerId)activeInventoryScroll=null;if(!activeItemDrag)return;if(activeItemDrag.scrollRaf)cancelAnimationFrame(activeItemDrag.scrollRaf);activeItemDrag.ghost?.remove();activeItemDrag.slot.classList.remove('dragging');activeItemDrag=null;$('trashSlot').classList.remove('drop-target');document.querySelectorAll('.drop-target').forEach(el=>el.classList.remove('drop-target'))});
 document.addEventListener('keydown',event=>{if(event.key!=='Enter'&&event.key!==' ')return;const slot=event.target.closest?.('[data-item],[data-equip]');if(!slot)return;const item=slot.dataset.item!==undefined?state.inventory[Number(slot.dataset.item)]:state.equipment[slot.dataset.equip];if(item){event.preventDefault();openItemDetails(item,slot.dataset.equip!==undefined)}});
-function gpsErrorText(error){if(error.code===1)return'Доступ к геопозиции запрещён. Разреши его в настройках сайта браузера и снова нажми кнопку входа.';if(error.code===2)return'Устройство пока не определило координаты. Включи геолокацию телефона и попробуй снова.';return'GPS временно недоступен или устройство не прислало координаты вовремя. Проверь геолокацию и нажми кнопку повторно.'}
+function gpsErrorText(error){if(error.code===1)return'Доступ к геопозиции запрещён. Разреши его в настройках сайта браузера и снова нажми кнопку входа.';if(error.code===2)return'Телефон временно не получил координаты. Продолжаю искать GPS-сигнал.';return'GPS пока не ответил. Продолжаю ждать сигнал и повторять определение.'}
 function lockGameForGps(message){gpsAllowed=false;gpsPositionReady=false;gpsFixReady=false;lastGpsPos=null;lastGpsAt=0;lastGpsAccuracy=0;gpsCandidate=null;gpsCandidateCount=0;if(gpsWatch!==null)navigator.geolocation?.clearWatch(gpsWatch);gpsWatch=null;document.body.classList.add('site-locked');$('gpsGate').classList.remove('hidden');$('gpsGateStatus').textContent=message;$('gpsGateBtn').disabled=false;$('gpsGateBtn').textContent='🔄 Проверить GPS и войти';$('gpsHead').textContent='GPS не подключён'}
+function handleGpsError(error,retryWatch=false){const message=gpsErrorText(error);if(error.code===1){lockGameForGps(message);return}if(gpsAllowed){$('gpsHead').textContent='Ищем GPS-сигнал…';return}document.body.classList.add('site-locked');$('gpsGate').classList.remove('hidden');$('gpsHead').textContent='Ожидание GPS';$('gpsGateStatus').textContent=message;$('gpsGateBtn').disabled=false;$('gpsGateBtn').textContent='🔄 Повторить проверку GPS';if(retryWatch)startGpsWatch()}
 function unlockGame(){if(!gpsPositionReady)return;const firstUnlock=!gpsAllowed;gpsAllowed=true;document.body.classList.remove('site-locked');$('gpsGate').classList.add('hidden');$('gpsGateStatus').textContent='';requestAnimationFrame(()=>map.invalidateSize());if(firstUnlock){if(monsters.length===0)spawnEnemy(false);updateMerchantForPosition();syncPeer();syncOnline()}}
 const gpsOptions={enableHighAccuracy:true,maximumAge:0,timeout:30000};
 function acceptGpsFix(position){const valid=updatePos({lat:position.coords.latitude,lng:position.coords.longitude,accuracy:position.coords.accuracy},'GPS');if(valid&&gpsPositionReady){unlockGame();map.setView(pos,Math.max(map.getZoom(),17));map.invalidateSize();return true}if(!gpsPositionReady){$('gpsHead').textContent='Проверяем GPS';$('gpsGateStatus').textContent=$('gpsGateStatus').textContent||'Получаю несколько точных измерений GPS…';$('gpsGateBtn').disabled=false;$('gpsGateBtn').textContent='Ожидаем точный GPS…'}return false}
-function startGpsWatch(){if(gpsWatch!==null)navigator.geolocation.clearWatch(gpsWatch);gpsWatch=navigator.geolocation.watchPosition(acceptGpsFix,error=>lockGameForGps(gpsErrorText(error)),gpsOptions)}
+function startGpsWatch(){if(gpsWatch!==null)navigator.geolocation.clearWatch(gpsWatch);gpsWatch=navigator.geolocation.watchPosition(acceptGpsFix,error=>handleGpsError(error),gpsOptions)}
 function requestGpsAccess(fromGate=false,permissionAlreadyGranted=false){
  const gateStatus=$('gpsGateStatus');if(!navigator.geolocation){lockGameForGps('Этот браузер не поддерживает геолокацию. Открой игру в браузере с поддержкой GPS.');return}
  if(!window.isSecureContext){lockGameForGps('Для GPS открой сайт через HTTPS.');return}
  document.body.classList.add('site-locked');$('gpsGate').classList.remove('hidden');$('gpsGateBtn').disabled=true;$('gpsGateBtn').textContent='⏳ Определяем местоположение…';gateStatus.textContent=permissionAlreadyGranted?'Доступ уже разрешён. Жду точные координаты устройства…':'Разреши доступ в запросе браузера и подожди несколько точных GPS-измерений.';$('gpsHead').textContent='Запрос GPS…';
  if(gpsWatch!==null)navigator.geolocation.clearWatch(gpsWatch);gpsWatch=null;
- navigator.geolocation.getCurrentPosition(position=>{acceptGpsFix(position);$('gpsGateBtn').disabled=false;if(!gpsAllowed)$('gpsGateBtn').textContent='Ожидаем точный GPS…';startGpsWatch()},error=>lockGameForGps(gpsErrorText(error)),gpsOptions);
+ navigator.geolocation.getCurrentPosition(position=>{acceptGpsFix(position);$('gpsGateBtn').disabled=false;if(!gpsAllowed)$('gpsGateBtn').textContent='Ожидаем точный GPS…';startGpsWatch()},error=>handleGpsError(error,true),gpsOptions);
 }
 $('gpsGateBtn').addEventListener('click',()=>requestGpsAccess(true));
 setInterval(()=>{for(const [id,p] of Object.entries(peers))if(Date.now()-p.at>10000){delete peers[id];if(peerMarkers[id])map.removeLayer(peerMarkers[id]);delete peerMarkers[id]}syncPeer()},5000);

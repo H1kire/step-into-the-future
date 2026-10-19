@@ -222,8 +222,14 @@ async function saveNickname() {
   feedback.textContent = '';
   try {
     const snapshot = await get(profileRef);
-    const profile = snapshot.val();
-    if (!profile) throw new Error('Профиль не найден. Перезагрузи страницу и попробуй снова.');
+    let profile = snapshot.val();
+    if (!profile) {
+      profile = await ensureAccountProfile(user);
+      chatName = profile.nickname || `user${profile.accountNumber}`;
+      if (lastPosition) lastPosition.name = chatName;
+      dispatchAccount(user, profile);
+      watchProfile(user);
+    }
     if (nickname === profile.nickname) { feedback.textContent = 'Этот ник уже установлен.'; setNicknameEditor(false); return; }
     const offsetSnapshot = await get(ref(database, '.info/serverTimeOffset'));
     const serverNow = Date.now() + (Number(offsetSnapshot.val()) || 0);
