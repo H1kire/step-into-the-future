@@ -1,12 +1,12 @@
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js';
 import { initializeAppCheck, ReCaptchaV3Provider } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-app-check.js';
 import { getAuth, signInAnonymously, GoogleAuthProvider, linkWithPopup, signInWithPopup, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js';
-import { getDatabase, ref, onValue, set, onDisconnect } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-database.js';
+import { getDatabase, ref, onValue, set, onDisconnect, get, runTransaction, update, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-database.js';
 
 import { firebaseConfig, appCheckSiteKey, developerUid } from './firebase-config.js';
 
 const onlineStatus = document.getElementById('onlineStatus');
-let lastPosition = null, lastSentAt = 0, currentPlayerRef = null, unsubscribePlayers = null;
+let lastPosition = null, lastSentAt = 0, currentPlayerRef = null, unsubscribePlayers = null, unsubscribeProfile = null;
 const app = initializeApp(firebaseConfig);
 if (appCheckSiteKey) initializeAppCheck(app, { provider: new ReCaptchaV3Provider(appCheckSiteKey), isTokenAutoRefreshEnabled: true });
 const auth = getAuth(app);
@@ -30,6 +30,55 @@ function publishPosition() {
 setInterval(() => { if (!document.hidden) publishPosition(); }, 10000);
 document.addEventListener('visibilitychange', () => { if (!document.hidden) publishPosition(); });
 
+function dispatchAccount(user, profile) {
+  if (!user || user.isAnonymous) {
+    window.dispatchEvent(new CustomEvent('firebase:auth', { detail: { uid: '', profile: null } }));
+    return;
+  }
+  const email = String(user.email || '');
+  const [local = '', domain = 'gmail.com'] = email.split('@');
+  const maskedEmail = email ? `${local.slice(0, 2)}__${local.slice(-2)}@${domain}` : '';
+  window.dispatchEvent(new CustomEvent('firebase:auth', { detail: {
+    uid: user.uid,
+    isDeveloper: !!developerUid && user.uid === developerUid,
+    profile,
+    email: maskedEmail,
+    createdAt: profile?.createdAt || Date.parse(user.metadata.creationTime || '') || Date.now()
+  }}));
+}
+
+async function ensureAccountProfile(user) {
+  const userProfileRef = ref(database, `profiles/${user.uid}`);
+  const existing = await get(userProfileRef);
+  if (existing.exists()) return existing.val();
+
+  // This client-side counter assigns a display number when someone first enters the game.
+  const counterResult = await runTransaction(ref(database, 'accountCounter'), value => (Number.isSafeInteger(value) && value >= 0 ? value : 0) + 1);
+  if (!counterResult.committed) throw new Error('Не удалось получить номер аккаунта');
+  const accountNumber = counterResult.snapshot.val();
+  const serverOffsetSnapshot = await get(ref(database, '.info/serverTimeOffset'));
+  const initialProfile = {
+    accountNumber,
+    nickname: `user${accountNumber}`,
+    createdAt: Date.now() + (Number(serverOffsetSnapshot.val()) || 0),
+    nicknameChangedAt: 0
+  };
+  const profileResult = await runTransaction(userProfileRef, current => current || initialProfile);
+  if (!profileResult.committed) throw new Error('Не удалось создать профиль аккаунта');
+  return profileResult.snapshot.val();
+}
+
+function watchProfile(user) {
+  if (unsubscribeProfile) unsubscribeProfile();
+  const profileRef = ref(database, `profiles/${user.uid}`);
+  unsubscribeProfile = onValue(profileRef, snapshot => {
+    if (snapshot.exists()) dispatchAccount(user, snapshot.val());
+  }, error => {
+    onlineStatus.textContent = 'Аккаунт: не удалось загрузить профиль';
+    console.error('Firebase profile read failed', error);
+  });
+}
+
 onAuthStateChanged(auth, async user => {
   if (!user) {
     try { await signInAnonymously(auth); }
@@ -37,11 +86,18 @@ onAuthStateChanged(auth, async user => {
     return;
   }
   window.firebasePlayerUid = user.uid;
-  window.dispatchEvent(new CustomEvent('firebase:auth', { detail: {
-    uid: user.isAnonymous ? '' : user.uid,
-    name: user.displayName || user.email || '',
-    isDeveloper: !user.isAnonymous && !!developerUid && user.uid === developerUid
-  }}));
+  if (user.isAnonymous) dispatchAccount(user, null);
+  else {
+    try {
+      const profile = await ensureAccountProfile(user);
+      dispatchAccount(user, profile);
+      watchProfile(user);
+    } catch (error) {
+      dispatchAccount(user, null);
+      onlineStatus.textContent = 'Аккаунт: обнови Rules базы Firebase';
+      console.error('Firebase profile setup failed', error);
+    }
+  }
   currentPlayerRef = ref(database, `players/${user.uid}`);
   if (unsubscribePlayers) unsubscribePlayers();
   unsubscribePlayers = onValue(ref(database, 'players'), snapshot => {
@@ -96,3 +152,35 @@ function showAuthError(error) {
 }
 
 document.getElementById('googleSignInBtn')?.addEventListener('click', connectGoogleAccount);
+
+function setNicknameEditor(open) {
+  const editor = document.getElementById('nicknameEditor');
+  if (editor) editor.hidden = !open;
+  if (open) {
+    const input = document.getElementById('nicknameInput');
+    input.value = document.getElementById('accountNickname')?.textContent || '';
+    input.focus();
+  }
+}
+document.getElementById('accountNickname')?.addEventListener('click', () => setNicknameEditor(true));
+document.getElementById('editNicknameBtn')?.addEventListener('click', () => setNicknameEditor(true));
+document.getElementById('cancelNicknameBtn')?.addEventListener('click', () => setNicknameEditor(false));
+document.getElementById('saveNicknameBtn')?.addEventListener('click', async () => {
+  const user = auth.currentUser;
+  const input = document.getElementById('nicknameInput');
+  const nickname = input.value.trim();
+  if (!user || user.isAnonymous) return;
+  if (!/^[\p{L}\p{N}_-]{2,20}$/u.test(nickname)) { onlineStatus.textContent = 'Ник: 2–20 букв, цифр, _ или -'; return; }
+  const profileRef = ref(database, `profiles/${user.uid}`);
+  try {
+    const snapshot = await get(profileRef);
+    const profile = snapshot.val();
+    const remaining = 86400000 - (Date.now() - (profile?.nicknameChangedAt || 0));
+    if (remaining > 0) { onlineStatus.textContent = `Ник можно менять через ${Math.ceil(remaining / 3600000)} ч.`; return; }
+    await update(profileRef, { nickname, nicknameChangedAt: serverTimestamp() });
+    setNicknameEditor(false);
+  } catch (error) {
+    onlineStatus.textContent = 'Не удалось сменить ник — проверь Rules Firebase';
+    console.error('Firebase nickname update failed', error);
+  }
+});

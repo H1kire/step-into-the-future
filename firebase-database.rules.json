@@ -1,5 +1,32 @@
 {
   "rules": {
+    "accountCounter": {
+      ".read": "auth != null",
+      ".write": "auth != null",
+      ".validate": "newData.isNumber() && ((data.exists() && newData.val() === data.val() + 1) || (!data.exists() && newData.val() === 1))"
+    },
+    "profiles": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        ".write": "auth != null && auth.uid === $uid",
+        ".validate": "newData.hasChildren(['accountNumber', 'nickname', 'createdAt', 'nicknameChangedAt'])",
+        "accountNumber": {
+          ".validate": "newData.isNumber() && newData.val() > 0 && (!data.exists() || newData.val() === data.val())"
+        },
+        "nickname": {
+          ".validate": "newData.isString() && newData.val().length >= 2 && newData.val().length <= 20 && (!data.exists() || newData.val() === data.val() || now - data.parent().child('nicknameChangedAt').val() >= 86400000)"
+        },
+        "createdAt": {
+          ".validate": "newData.isNumber() && (!data.exists() || newData.val() === data.val())"
+        },
+        "nicknameChangedAt": {
+          ".validate": "newData.isNumber() && (newData.val() === data.val() || (newData.val() <= now && (!data.exists() || now - data.val() >= 86400000)))"
+        },
+        "$other": {
+          ".validate": false
+        }
+      }
+    },
     "players": {
       ".read": "auth != null",
       "$uid": {
