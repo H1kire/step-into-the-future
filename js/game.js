@@ -90,7 +90,9 @@ function openItemDetails(item,equipped=false){
 }
 function syncPeer(){if(channel&&gpsAllowed&&gpsPositionReady)channel.postMessage({type:'presence',id:playerId,pos,name:'Странник',at:Date.now()})}
 function syncOnline(){if(gpsAllowed&&gpsPositionReady&&lastRealGpsPos)window.dispatchEvent(new CustomEvent('game:position',{detail:{lat:lastRealGpsPos[0],lng:lastRealGpsPos[1],name:'Странник'}}))}
-if(channel)channel.onmessage=e=>{const m=e.data;if(!m||m.id===playerId)return;if(m.type==='presence'){peers[m.id]=m;if(map.distance(pos,m.pos)<=1000){if(!peerMarkers[m.id])peerMarkers[m.id]=L.marker(m.pos,{icon:L.divIcon({className:'',html:'<div class="marker youmarker">🧝</div>',iconSize:[42,42],iconAnchor:[21,21]})}).addTo(map).bindPopup(m.name);else peerMarkers[m.id].setLatLng(m.pos)}else if(peerMarkers[m.id]){map.removeLayer(peerMarkers[m.id]);delete peerMarkers[m.id]}renderChatPeers()}if(m.type==='chat'&&peers[m.id]&&map.distance(pos,peers[m.id].pos)<=150)addChat(m.name+': '+m.text)};
+if(channel)channel.onmessage=e=>{const m=e.data;if(!m||m.id===playerId)return;if(m.type==='presence'){peers[m.id]=m;if(map.distance(pos,m.pos)<=1000){if(!peerMarkers[m.id])peerMarkers[m.id]=L.marker(m.pos,{icon:L.divIcon({className:'',html:'<div class="marker youmarker">🧝</div>',iconSize:[42,42],iconAnchor:[21,21]})}).addTo(map).bindPopup(m.name);else peerMarkers[m.id].setLatLng(m.pos)}else if(peerMarkers[m.id]){map.removeLayer(peerMarkers[m.id]);delete peerMarkers[m.id]}renderChatPeers()}};
+window.addEventListener('firebase:chat',event=>{const m=event.detail;if(!m||!Number.isFinite(m.lat)||!Number.isFinite(m.lng)||Date.now()-m.createdAt>120000)return;if(m.uid===window.firebasePlayerUid)addChat(`Ты: ${String(m.text||'').slice(0,180)}`);else if(map.distance(pos,[m.lat,m.lng])<=150)addChat(`${String(m.name||'Игрок').slice(0,24)}: ${String(m.text||'').slice(0,180)}`)});
+window.addEventListener('firebase:chat-status',event=>{const el=$('chatStatus');if(el)el.textContent=event.detail?.text||''});
 const onlineMarkers={};
 window.addEventListener('firebase:players',event=>{
  const online=event.detail||{},now=Date.now();
@@ -285,7 +287,7 @@ $('slashBtn').addEventListener('click',()=>{
 $('centerBtn').addEventListener('click',()=>map.setView(pos,17));
 $('devModeBtn').addEventListener('click',e=>{devMode=!devMode;e.currentTarget.textContent=`🛠 Режим разработчика: ${devMode?'вкл.':'выкл.'} · ${devMode?'кликни по карте для телепорта':''}`;});
 map.on('click',e=>{if(!devMode)return;updatePos(e.latlng,'DEV');map.setView(e.latlng,17);log('Разработчик переместил персонажа кликом по карте.','good')});
-$('chatSend').addEventListener('click',()=>{const text=$('chatInput').value.trim();if(!text)return;addChat('Ты: '+text);if(channel)channel.postMessage({type:'chat',id:playerId,name:'Странник',text,at:Date.now()});$('chatInput').value=''});
+$('chatSend').addEventListener('click',()=>{const input=$('chatInput'),text=input.value.trim();if(!text)return;window.dispatchEvent(new CustomEvent('game:chat-send',{detail:{text,lat:pos[0],lng:pos[1]}}));input.value=''});
 $('chatInput').addEventListener('keydown',e=>{if(e.key==='Enter')$('chatSend').click()});
 $('merchantGoods').addEventListener('click',event=>{const button=event.target.closest('[data-buy]');if(button)buyMerchantOffer(button.dataset.buy)});
 $('merchantSellList').addEventListener('click',event=>{const button=event.target.closest('[data-sell]');if(button)sellMerchantItem(Number(button.dataset.sell))});

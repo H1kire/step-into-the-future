@@ -1,12 +1,12 @@
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js';
 import { initializeAppCheck, ReCaptchaV3Provider } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-app-check.js';
 import { getAuth, signInAnonymously, GoogleAuthProvider, linkWithPopup, signInWithPopup, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js';
-import { getDatabase, ref, onValue, set, onDisconnect, get, runTransaction, update, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-database.js';
+import { getDatabase, ref, onValue, onChildAdded, set, onDisconnect, get, runTransaction, update, serverTimestamp, push, query, orderByChild, limitToLast } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-database.js';
 
 import { firebaseConfig, appCheckSiteKey, developerUid } from './firebase-config.js';
 
 const onlineStatus = document.getElementById('onlineStatus');
-let lastPosition = null, lastSentAt = 0, currentPlayerRef = null, unsubscribePlayers = null, unsubscribeProfile = null;
+let lastPosition = null, lastSentAt = 0, currentPlayerRef = null, unsubscribePlayers = null, unsubscribeProfile = null, unsubscribeChat = null, chatName = 'Странник', lastChatSentAt = 0;
 const app = initializeApp(firebaseConfig);
 if (appCheckSiteKey) initializeAppCheck(app, { provider: new ReCaptchaV3Provider(appCheckSiteKey), isTokenAutoRefreshEnabled: true });
 const auth = getAuth(app);
@@ -72,11 +72,25 @@ function watchProfile(user) {
   if (unsubscribeProfile) unsubscribeProfile();
   const profileRef = ref(database, `profiles/${user.uid}`);
   unsubscribeProfile = onValue(profileRef, snapshot => {
-    if (snapshot.exists()) dispatchAccount(user, snapshot.val());
+    if (snapshot.exists()) { chatName = snapshot.val().nickname || `user${snapshot.val().accountNumber}`; dispatchAccount(user, snapshot.val()); }
   }, error => {
     onlineStatus.textContent = 'Аккаунт: не удалось загрузить профиль';
     console.error('Firebase profile read failed', error);
   });
+}
+
+function watchChat(user) {
+  if (unsubscribeChat) unsubscribeChat();
+  const recentChat = query(ref(database, 'chatMessages'), orderByChild('createdAt'), limitToLast(50));
+  unsubscribeChat = onChildAdded(recentChat, snapshot => {
+    const message = snapshot.val();
+    if (!message || !Number.isFinite(message.createdAt)) return;
+    window.dispatchEvent(new CustomEvent('firebase:chat', { detail: { ...message, id: snapshot.key } }));
+  }, error => {
+    window.dispatchEvent(new CustomEvent('firebase:chat-status', { detail: { text: 'Чат недоступен: проверь Rules Realtime Database' } }));
+    console.error('Firebase chat read failed', error);
+  });
+  window.dispatchEvent(new CustomEvent('firebase:chat-status', { detail: { text: `Чат подключён · сообщения видны в радиусе 150 м` } }));
 }
 
 onAuthStateChanged(auth, async user => {
@@ -86,10 +100,11 @@ onAuthStateChanged(auth, async user => {
     return;
   }
   window.firebasePlayerUid = user.uid;
-  if (user.isAnonymous) dispatchAccount(user, null);
+  if (user.isAnonymous) { chatName = 'Странник'; dispatchAccount(user, null); }
   else {
     try {
       const profile = await ensureAccountProfile(user);
+      chatName = profile.nickname || `user${profile.accountNumber}`;
       dispatchAccount(user, profile);
       watchProfile(user);
     } catch (error) {
@@ -99,6 +114,7 @@ onAuthStateChanged(auth, async user => {
     }
   }
   currentPlayerRef = ref(database, `players/${user.uid}`);
+  watchChat(user);
   if (unsubscribePlayers) unsubscribePlayers();
   unsubscribePlayers = onValue(ref(database, 'players'), snapshot => {
     window.dispatchEvent(new CustomEvent('firebase:players', { detail: snapshot.val() || {} }));
@@ -152,6 +168,32 @@ function showAuthError(error) {
 }
 
 document.getElementById('googleSignInBtn')?.addEventListener('click', connectGoogleAccount);
+
+window.addEventListener('game:chat-send', async event => {
+  const { text: rawText, lat, lng } = event.detail || {};
+  const message = String(rawText || '').trim().slice(0, 180);
+  const user = auth.currentUser;
+  if (!user || !message || !Number.isFinite(lat) || !Number.isFinite(lng)) {
+    window.dispatchEvent(new CustomEvent('firebase:chat-status', { detail: { text: 'Ждём подключения и точной GPS-позиции' } }));
+    return;
+  }
+  if (Date.now() - lastChatSentAt < 800) return;
+  lastChatSentAt = Date.now();
+  try {
+    await set(push(ref(database, 'chatMessages')), {
+      uid: user.uid,
+      name: String(chatName || 'Странник').slice(0, 24),
+      text: message,
+      lat,
+      lng,
+      createdAt: serverTimestamp()
+    });
+    window.dispatchEvent(new CustomEvent('firebase:chat-status', { detail: { text: 'Сообщение отправлено' } }));
+  } catch (error) {
+    window.dispatchEvent(new CustomEvent('firebase:chat-status', { detail: { text: 'Не удалось отправить: обнови Rules базы Firebase' } }));
+    console.error('Firebase chat send failed', error);
+  }
+});
 
 function setNicknameEditor(open) {
   const editor = document.getElementById('nicknameEditor');
