@@ -162,7 +162,7 @@ $('spellBtn').addEventListener('click',()=>{
  if(!enemy||turn!=='player'||state.mana<15)return;
  turn='enemy';state.mana-=15;
  const spellDamage=24*(1+abilityBonus('attack'));enemy.hp=Math.max(0,enemy.hp-spellDamage);
- log(`Искра наносит ${formatGameNumber(spellDamage)} урона и тратит 15.000 маны.`,'good');renderEnemy();render();
+ log(`Искра наносит ${formatGameNumber(spellDamage)} урона и тратит ${formatGameNumber(15)} маны.`,'good');renderEnemy();render();
  if(enemy.hp<=0){finishEnemy();turn='player';return}
  $('attackBtn').disabled=true;$('spellBtn').disabled=true;$('combatStatus').textContent='Заклинание сработало. Ход противника через 1 секунду…';
  setTimeout(()=>{if(!enemy)return;const hit=Math.max(1,enemy.atk+Math.floor(Math.random()*5)-2-effectiveDefense());state.hp=Math.max(0,state.hp-hit);log(`${enemy.name} отвечает и наносит ${formatGameNumber(hit)} урона с учётом защиты.`,'bad');if(state.hp<=0){state.hp=Math.max(1,effectiveMaxHp()*.35);log('Ты отступил и восстановился у безопасного места.','bad')}turn='player';$('attackBtn').disabled=false;$('spellBtn').disabled=state.mana<15;$('combatStatus').textContent='Твой ход.';render()},1000)
