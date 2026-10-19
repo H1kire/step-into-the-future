@@ -43,7 +43,7 @@ window.addEventListener('firebase:auth',event=>{const {uid,isDeveloper,profile,e
 function xpToNextLevel(level=state.level){return Math.ceil(100*Math.pow(1.65,level))}
 function resourceName(){return state.ascensionClass==='mage'?'Мана':'Энергия'}
 function renderStats(){const weaponBonus=(state.equipment['Оружие']?.attackBonus||0)+(state.equipment['2 рука']?.attackBonus||0),resource=resourceName();const entries=[['Уровень',state.level],['Ability Points',state.abilityPoints],['Поинты вознесения',state.ascensionPoints],['Класс',({adventurer:'Авантюрист',warrior:'Воин',archer:'Стрелок',mage:'Маг'})[state.ascensionClass]||'Не выбран'],['Опыт',`${formatGameNumber(state.xp)} / ${formatGameNumber(xpToNextLevel())}`],['Опыт до следующего уровня',formatGameNumber(xpToNextLevel())],['Здоровье',`${formatGameNumber(state.hp)} / ${formatGameNumber(effectiveMaxHp())}`],['Максимум здоровья',formatGameNumber(effectiveMaxHp())],['Базовая атака',formatGameNumber(state.attack)],['Бонус оружия',formatGameNumber(weaponBonus)],['Итоговый урон',formatGameNumber(totalAttack())],['Защита',formatGameNumber(effectiveDefense())],[resource,`${formatGameNumber(state.energy)} / ${formatGameNumber(effectiveMaxEnergy())}`],[`Максимум ${resource.toLowerCase()}`,formatGameNumber(effectiveMaxEnergy())],['Монеты',formatGameNumber(state.coins)],['Победы',state.encounters],['Предметы',state.inventory.length]];$('heroStats').innerHTML=entries.map(([k,v])=>`<div class="status"><b>${k}:</b> ${v}</div>`).join('')}
-const playerId=crypto.randomUUID?crypto.randomUUID():String(Math.random());let peers={},peerMarkers={},channel='BroadcastChannel' in window?new BroadcastChannel('stranniki-local'):null;
+const playerId=crypto.randomUUID?crypto.randomUUID():String(Math.random());let peers={},peerMarkers={},seenChatIds=new Set(),channel='BroadcastChannel' in window?new BroadcastChannel('stranniki-local'):null;
 const slots=['Оружие','2 рука','Обувь','Ноги','Торс','Шлем','Рюкзак'];const rarities=[['Обычное','common'],['Необычное','uncommon'],['Редкое','rare'],['Эпическое','epic'],['Легендарное','legendary']];
 const weaponDamage={common:2,uncommon:4,rare:6,epic:9,legendary:13};
 const merchantCatalog=[
@@ -91,7 +91,7 @@ function openItemDetails(item,equipped=false){
 function syncPeer(){if(channel&&gpsAllowed&&gpsPositionReady)channel.postMessage({type:'presence',id:playerId,pos,name:'Странник',at:Date.now()})}
 function syncOnline(){if(gpsAllowed&&gpsPositionReady&&lastRealGpsPos)window.dispatchEvent(new CustomEvent('game:position',{detail:{lat:lastRealGpsPos[0],lng:lastRealGpsPos[1],name:'Странник'}}))}
 if(channel)channel.onmessage=e=>{const m=e.data;if(!m||m.id===playerId)return;if(m.type==='presence'){peers[m.id]=m;if(map.distance(pos,m.pos)<=1000){if(!peerMarkers[m.id])peerMarkers[m.id]=L.marker(m.pos,{icon:L.divIcon({className:'',html:'<div class="marker youmarker">🧝</div>',iconSize:[42,42],iconAnchor:[21,21]})}).addTo(map).bindPopup(m.name);else peerMarkers[m.id].setLatLng(m.pos)}else if(peerMarkers[m.id]){map.removeLayer(peerMarkers[m.id]);delete peerMarkers[m.id]}renderChatPeers()}};
-window.addEventListener('firebase:chat',event=>{const m=event.detail;if(!m||!Number.isFinite(m.lat)||!Number.isFinite(m.lng)||Date.now()-m.createdAt>120000)return;if(m.uid===window.firebasePlayerUid)addChat(`Ты: ${String(m.text||'').slice(0,180)}`);else if(map.distance(pos,[m.lat,m.lng])<=150)addChat(`${String(m.name||'Игрок').slice(0,24)}: ${String(m.text||'').slice(0,180)}`)});
+window.addEventListener('firebase:chat',event=>{const m=event.detail;if(!m||!Number.isFinite(m.lat)||!Number.isFinite(m.lng)||!m.id||seenChatIds.has(m.id))return;seenChatIds.add(m.id);if(seenChatIds.size>300)seenChatIds.delete(seenChatIds.values().next().value);if(m.uid===window.firebasePlayerUid)addChat(`Ты: ${String(m.text||'').slice(0,180)}`);else if(map.distance(pos,[m.lat,m.lng])<=150)addChat(`${String(m.name||'Игрок').slice(0,24)}: ${String(m.text||'').slice(0,180)}`)});
 window.addEventListener('firebase:chat-status',event=>{const el=$('chatStatus');if(el)el.textContent=event.detail?.text||''});
 const onlineMarkers={};
 window.addEventListener('firebase:players',event=>{
@@ -102,9 +102,10 @@ window.addEventListener('firebase:players',event=>{
   if(!onlineMarkers[id])onlineMarkers[id]=L.marker(point,{icon:L.divIcon({className:'',html:'<div class="marker youmarker">🧝</div>',iconSize:[42,42],iconAnchor:[21,21]})}).addTo(map).bindPopup('Игрок: '+String(p.name||'Странник').slice(0,24));else onlineMarkers[id].setLatLng(point);
  }
  for(const [id,marker] of Object.entries(onlineMarkers)){if(!online[id]||now-(online[id]?.updatedAt||0)>30000){map.removeLayer(marker);delete onlineMarkers[id]}}
+ renderChatPeers();
 });
-function addChat(t){const p=document.createElement('p');p.textContent=t;$('chatlog').append(p);$('chatlog').scrollTop=$('chatlog').scrollHeight}
-function renderChatPeers(){const n=Object.values(peers).filter(p=>map.distance(pos,p.pos)<=1000).length;$('chatlog').dataset.near=n;const first=$('chatlog').querySelector('p');if(first&&first.textContent.startsWith('Игроки поблизости'))first.textContent=`Игроков рядом (1000 м): ${n}. Чат доступен в радиусе 150 м.`}
+function addChat(t){const log=$('chatlog'),first=log.firstElementChild;if(first&&first.textContent==='Сообщения игроков рядом появятся здесь.')first.remove();const p=document.createElement('p');p.textContent=t;log.append(p);while(log.children.length>60)log.firstElementChild.remove();log.scrollTop=log.scrollHeight}
+function renderChatPeers(){const n=Object.values(onlineMarkers).filter(marker=>map.distance(pos,marker.getLatLng())<=150).length;const status=$('chatStatus');if(status)status.textContent=n?`Чат подключён · игроков в радиусе 150 м: ${n}`:'Чат подключён · рядом пока нет игроков в радиусе 150 м';$('chatlog').dataset.near=n}
 const foes=[
  {name:'Дикий слизень',icon:'🟢',imageKey:'slime',hp:28,atk:6,def:0,xp:25,coins:8},
  {name:'Подворотный гоблин',icon:'👺',imageKey:'goblin',hp:42,atk:9,def:2,xp:38,coins:13},
@@ -155,7 +156,7 @@ function updatePos(latlng,source='GPS'){
  }
  const distanceFrom=source==='GPS'?lastGpsPos:null;if(distanceFrom){const d=map.distance(distanceFrom,next);if(d<100000)distance+=d;}
  if(source==='GPS')lastGpsPos=next;
- lastPos=next;pos=next;gpsPositionReady=true;playerMarker.setLatLng(pos);if(source==='GPS'&&!gpsInitialCentered){map.setView(pos,Math.max(map.getZoom(),16));gpsInitialCentered=true}
+ lastPos=next;pos=next;gpsPositionReady=true;playerMarker.setLatLng(pos);renderChatPeers();if(source==='GPS'&&!gpsInitialCentered){map.setView(pos,Math.max(map.getZoom(),16));gpsInitialCentered=true}
  cleanupDistantMonsters();
  if(gpsAllowed)updateMerchantForPosition();
  $('coords').textContent=`${pos[0].toFixed(5)}, ${pos[1].toFixed(5)}`;
