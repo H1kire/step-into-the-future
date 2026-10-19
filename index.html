@@ -16,7 +16,7 @@
   <div class="hero"><div class="avatar">🧙</div><div><div class="name">Странник</div><div class="level" id="levelText">Уровень 1 · Новичок</div><div class="sub" id="xpText">0 / 100 опыта</div><div class="bar xpbar"><i id="xpBar" style="width:0%"></i></div></div></div>
   <div class="stats">
     <div class="stat"><div class="label">❤️ Здоровье</div><div class="value" id="hpText">100 / 100</div><div class="bar"><i id="hpBar"></i></div></div>
-    <div class="stat"><div class="label">🔷 Мана</div><div class="value" id="hudManaText">50 / 50</div></div>
+    <div class="stat"><div class="label">⚡ Энергия</div><div class="value" id="hudEnergyText">50 / 50</div></div>
     <div class="stat"><div class="label">⚔️ Атака</div><div class="value" id="atkText">12</div></div>
     <div class="stat"><div class="label">🛡 Защита</div><div class="value" id="defText">0</div></div>
     <div class="stat"><div class="label">🪙 Монеты</div><div class="value" id="coinText">0</div></div>
@@ -31,10 +31,10 @@
 </section>
 <section class="card enemy" id="enemyCard">
 <h2>Обнаружен противник!</h2>
-<div class="enemyhead"><div class="enemyicon" id="enemyIcon">👾</div><div style="flex:1"><div class="enemyname" id="enemyName">Дикий слизень</div><div class="enemyhint" id="enemyHint">Враждебное существо</div><div id="enemyHpText" class="sub">30 / 30 HP</div><div class="bar"><i id="enemyHpBar"></i></div></div></div>
+<div class="enemyhead"><div class="enemyicon" id="enemyIcon">👾</div><div style="flex:1"><div class="enemyname" id="enemyName">Дикий слизень</div><div class="enemyhint" id="enemyHint">Враждебное существо</div><div id="enemyHpText" class="sub">30 / 30 HP</div><div class="bar"><i id="enemyHpBar"></i></div></div></div><div id="enemyImageCredit" class="image-credit"></div>
 <div class="enemy-stats"><div class="enemy-stat">Уровень<b id="enemyLevel">1</b></div><div class="enemy-stat">Урон<b id="enemyAttack">6</b></div><div class="enemy-stat">HP<b id="enemyHpStat">28 / 28</b></div><div class="enemy-stat">Защита<b id="enemyDefense">0</b></div></div>
 <div class="actions" style="margin-top:12px"><button class="danger" id="attackBtn">⚔️ Атаковать</button><button class="secondary" id="potionBtn">🧪 Лечиться (1)</button></div>
-<div class="status">🔷 Мана: <b id="manaText">50 / 50</b></div><button class="secondary full" id="spellBtn">✨ Искра (15 маны)</button>
+<div class="status">⚡ Энергия: <b id="energyText">50 / 50</b></div><button class="secondary full" id="slashBtn">⚔️ Рассечение (15 энергии)</button>
 <div class="status" id="combatStatus">Победи врага, чтобы получить опыт и монеты.</div>
 </section>
 <section class="card"><h2>Журнал приключений</h2><div class="log" id="log"><p>Мир ждёт своего исследователя. Выйди на прогулку и найди первого врага!</p></div></section>
@@ -46,11 +46,12 @@
 <div class="mapwrap"><div id="map"></div><div class="mapbadge">📍 <b id="mapState">Ожидание координат</b><br><span id="coords">Карта загружена</span></div><div class="mapbuttons"><button class="secondary" id="centerBtn">🎯 К персонажу</button></div></div>
 </main>
 </div>
-<section class="card floating-panel hidden item-detail-panel" id="itemDetailPanel" aria-live="polite"><div class="panel-title"><h2 id="itemDetailTitle">Предмет</h2><button type="button" class="secondary panel-close" aria-label="Закрыть информацию о предмете">✕</button></div><div id="itemDetailRarity"></div><div id="itemDetailBody"></div></section>
+<section class="card floating-panel hidden item-detail-panel" id="itemDetailPanel" aria-live="polite"><div class="panel-title"><h2 id="itemDetailTitle">Предмет</h2><button type="button" class="secondary panel-close" aria-label="Закрыть информацию о предмете">✕</button></div><div class="item-detail-image" id="itemDetailImage">🎒</div><div id="itemImageCredit" class="image-credit"></div><div id="itemDetailRarity"></div><div id="itemDetailBody"></div></section>
 <section id="gpsGate" class="gps-gate" role="dialog" aria-modal="true" aria-labelledby="gpsGateTitle">
  <div class="gps-gate-card"><div class="gps-gate-icon">📍</div><h1 id="gpsGateTitle">Для игры нужен GPS</h1><p>Разреши браузеру доступ к геопозиции и дождись определения координат. До этого игровой экран останется закрыт.</p><button type="button" class="primary" id="gpsGateBtn">Разрешить GPS и войти в игру</button><p class="gps-gate-status" id="gpsGateStatus" aria-live="polite"></p></div>
 </section>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="./js/game-images.js"></script>
 <script src="./js/number-format.js"></script>
 <script src="./js/game.js"></script>
 <script src="./js/ability-tree.js"></script>

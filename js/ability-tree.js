@@ -5,7 +5,7 @@
       lanes: [
         { id: 'attack', title: 'Атака', effects: { attack: 0.04 }, detail: '+4% к базовой атаке' },
         { id: 'health', title: 'Здоровье', effects: { health: 0.04 }, detail: '+4% к максимальному здоровью' },
-        { id: 'mana', title: 'Мана', effects: { mana: 0.04 }, detail: '+4% к максимальной мане' },
+        { id: 'energy', title: 'Энергия', effects: { energy: 0.04 }, detail: '+4% к максимальной энергии' },
         { id: 'defense', title: 'Защита', effects: { defense: 0.04 }, detail: '+4% к защите' }
       ]
     },
@@ -21,8 +21,8 @@
       id: 'hybrid', title: 'III · Гибридные статы', color: '#d59aff', xs: [950, 1050, 1150], center: 1050,
       lanes: [
         { id: 'force', title: 'Сила и здоровье', effects: { attack: 0.02, health: 0.02 }, detail: '+2% к атаке и здоровью' },
-        { id: 'guard', title: 'Защита и мана', effects: { defense: 0.02, mana: 0.02 }, detail: '+2% к защите и мане' },
-        { id: 'balance', title: 'Баланс', effects: { attack: 0.015, health: 0.015, defense: 0.015, mana: 0.015 }, detail: '+1.5% к атаке, здоровью, защите и мане' }
+        { id: 'guard', title: 'Защита и энергия', effects: { defense: 0.02, energy: 0.02 }, detail: '+2% к защите и энергии' },
+        { id: 'balance', title: 'Баланс', effects: { attack: 0.015, health: 0.015, defense: 0.015, energy: 0.015 }, detail: '+1.5% к атаке, здоровью, защите и энергии' }
       ]
     }
   ];
@@ -49,7 +49,7 @@
   const nodeById = new Map(nodes.map(node => [node.id, node]));
 
   function bonuses(purchasedIds) {
-    const totals = { attack: 0, health: 0, mana: 0, defense: 0, drop: 0, gold: 0, rarity: 0 };
+    const totals = { attack: 0, health: 0, energy: 0, defense: 0, drop: 0, gold: 0, rarity: 0 };
     for (const id of purchasedIds) {
       const node = nodeById.get(id);
       if (!node) continue;
@@ -140,7 +140,7 @@
     const status = nodeStatus(node, purchased, current.abilityPoints);
     const currentTotal = bonuses(current.purchased);
     const afterTotal = bonuses([...current.purchased, node.id]);
-    const labels = { attack: 'атака', health: 'здоровье', mana: 'мана', defense: 'защита', drop: 'шанс лута', gold: 'золото', rarity: 'редкость' };
+    const labels = { attack: 'атака', health: 'здоровье', energy: 'энергия', defense: 'защита', drop: 'шанс лута', gold: 'золото', rarity: 'редкость' };
     const totalText = Object.keys(afterTotal).filter(key => afterTotal[key] !== currentTotal[key]).map(key => `${labels[key]}: ${format(currentTotal[key] * 100)}% → ${format(afterTotal[key] * 100)}%`).join(' · ');
     detail.innerHTML = `<b>${node.branch.title} · ${node.lane.title} ${node.depth}</b><br>${node.detail} за узел.<br>Суммарный бонус после покупки: ${totalText}.<br>Стоимость: ${format(node.cost)} Ability Points.`;
     buyButton.disabled = status !== 'available';

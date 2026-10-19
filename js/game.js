@@ -15,12 +15,12 @@ let playerMarker=L.marker(pos,{icon:playerIcon}).addTo(map).bindPopup('Ты зд
 let enemyMarker=null, enemy=null, monsters=[],gpsWatch=null, demoCount=0, distance=Number.isFinite(savedGame.distance)?savedGame.distance:0,lastPos=null,gpsAllowed=false,gpsPositionReady=false,gpsFixReady=false,gpsInitialCentered=false,lastRealGpsPos=savedGame.realGps&&Array.isArray(savedGame.pos)?savedGame.pos:null,lastGpsPos=null,lastGpsAt=0,lastGpsAccuracy=0,gpsCandidate=null,gpsCandidateCount=0,saveTimer=null;
 let state={level:1,xp:0,hp:100,maxHp:100,coins:0,potions:1,attack:12,defense:0,encounters:0,...(savedGame.state||{})};
 let merchantPos=Array.isArray(savedGame.merchantPos)&&savedGame.merchantPos.length===2&&savedGame.merchantPos.every(Number.isFinite)?savedGame.merchantPos:null,merchantMarker=null;
-state.inventory=Array.isArray(state.inventory)?state.inventory:[];state.equipment=state.equipment&&typeof state.equipment==='object'?state.equipment:{};state.mana=Number.isFinite(state.mana)?state.mana:50;state.maxMana=Number.isFinite(state.maxMana)?state.maxMana:50;
+state.inventory=Array.isArray(state.inventory)?state.inventory:[];state.equipment=state.equipment&&typeof state.equipment==='object'?state.equipment:{};state.energy=Number.isFinite(state.energy)?state.energy:(Number.isFinite(state.mana)?state.mana:50);state.maxEnergy=Number.isFinite(state.maxEnergy)?state.maxEnergy:(Number.isFinite(state.maxMana)?state.maxMana:50);delete state.mana;delete state.maxMana;
 state.potions=Math.max(0,Math.min(10,Number.isFinite(state.potions)?state.potions:1));
-state.abilityPoints=Number.isFinite(state.abilityPoints)?state.abilityPoints:Math.max(0,state.level-1);state.skillNodes=Array.isArray(state.skillNodes)?state.skillNodes:[];
+state.abilityPoints=Number.isFinite(state.abilityPoints)?state.abilityPoints:Math.max(0,state.level-1);state.skillNodes=Array.isArray(state.skillNodes)?state.skillNodes.map(id=>String(id).replace(/^hero-mana-/,'hero-energy-')):[];
 function saveGame(){try{localStorage.setItem(SAVE_KEY,JSON.stringify({state,distance,pos:lastRealGpsPos,displayPos:pos,realGps:!!lastRealGpsPos,merchantPos,log:Array.from($('log').children).map(p=>({text:p.textContent,kind:p.className})),monsters:monsters.map(({marker,...m})=>m)}))}catch{}}
 function scheduleSave(){clearTimeout(saveTimer);saveTimer=setTimeout(saveGame,350)}
-let devMode=false,turn='player',lastAttack=0,combatId=0;
+let devMode=false,turn='player',lastAttack=0,combatId=0,activeItemDrag=null;
 function setupPanels(){
  const aside=document.querySelector('aside');
  const playerHud=aside.querySelector(':scope > .card:first-child');playerHud.id='playerHud';playerHud.classList.add('floating-panel');document.body.append(playerHud);
@@ -35,7 +35,8 @@ function setupPanels(){
  document.querySelectorAll('.panel-close').forEach(button=>button.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();button.closest('.floating-panel').classList.add('hidden')}));
  document.querySelectorAll('.floating-panel .panel-title').forEach(bar=>{let panel=bar.closest('.floating-panel'),drag=null;bar.addEventListener('pointerdown',e=>{if(e.target.closest('button'))return;drag={x:e.clientX-panel.offsetLeft,y:e.clientY-panel.offsetTop};bar.setPointerCapture(e.pointerId)});bar.addEventListener('pointermove',e=>{if(!drag)return;panel.style.left=Math.max(0,Math.min(innerWidth-panel.offsetWidth,e.clientX-drag.x))+'px';panel.style.top=Math.max(58,Math.min(innerHeight-60,e.clientY-drag.y))+'px';panel.style.bottom='auto'});bar.addEventListener('pointerup',()=>drag=null)});
 }
-function renderStats(){const entries=[['Уровень',state.level],['Ability Points',state.abilityPoints],['Опыт',`${formatGameNumber(state.xp)} / ${formatGameNumber(state.level*100)}`],['Максимум опыта до уровня',formatGameNumber(state.level*100)],['Здоровье',`${formatGameNumber(state.hp)} / ${formatGameNumber(effectiveMaxHp())}`],['Максимум здоровья',formatGameNumber(effectiveMaxHp())],['Базовая атака',formatGameNumber(state.attack)],['Бонус оружия',formatGameNumber(state.equipment['Оружие']?.attackBonus||0)],['Итоговый урон',formatGameNumber(totalAttack())],['Защита',formatGameNumber(effectiveDefense())],['Мана',`${formatGameNumber(state.mana)} / ${formatGameNumber(effectiveMaxMana())}`],['Максимум маны',formatGameNumber(effectiveMaxMana())],['Монеты',formatGameNumber(state.coins)],['Победы',state.encounters],['Предметы',state.inventory.length]];$('heroStats').innerHTML=entries.map(([k,v])=>`<div class="status"><b>${k}:</b> ${v}</div>`).join('')}
+function xpToNextLevel(level=state.level){return Math.ceil(100*Math.pow(1.65,level))}
+function renderStats(){const entries=[['Уровень',state.level],['Ability Points',state.abilityPoints],['Опыт',`${formatGameNumber(state.xp)} / ${formatGameNumber(xpToNextLevel())}`],['Опыт до следующего уровня',formatGameNumber(xpToNextLevel())],['Здоровье',`${formatGameNumber(state.hp)} / ${formatGameNumber(effectiveMaxHp())}`],['Максимум здоровья',formatGameNumber(effectiveMaxHp())],['Базовая атака',formatGameNumber(state.attack)],['Бонус оружия',formatGameNumber(state.equipment['Оружие']?.attackBonus||0)],['Итоговый урон',formatGameNumber(totalAttack())],['Защита',formatGameNumber(effectiveDefense())],['Энергия',`${formatGameNumber(state.energy)} / ${formatGameNumber(effectiveMaxEnergy())}`],['Максимум энергии',formatGameNumber(effectiveMaxEnergy())],['Монеты',formatGameNumber(state.coins)],['Победы',state.encounters],['Предметы',state.inventory.length]];$('heroStats').innerHTML=entries.map(([k,v])=>`<div class="status"><b>${k}:</b> ${v}</div>`).join('')}
 const playerId=crypto.randomUUID?crypto.randomUUID():String(Math.random());let peers={},peerMarkers={},channel='BroadcastChannel' in window?new BroadcastChannel('stranniki-local'):null;
 const slots=['Оружие','Обувь','Ноги','Торс','Шлем','Рюкзак'];const rarities=[['Обычное','common'],['Необычное','uncommon'],['Редкое','rare'],['Эпическое','epic'],['Легендарное','legendary']];
 const weaponDamage={common:2,uncommon:4,rare:6,epic:9,legendary:13};
@@ -50,19 +51,21 @@ const merchantCatalog=[
 function abilityBonus(key){return window.AbilityTree?.getBonuses?.()[key]||0}
 function totalAttack(){return (state.attack+(state.equipment['Оружие']?.attackBonus||0))*(1+abilityBonus('attack'))}
 function effectiveMaxHp(){return state.maxHp*(1+abilityBonus('health'))}
-function effectiveMaxMana(){return state.maxMana*(1+abilityBonus('mana'))}
+function effectiveMaxEnergy(){return state.maxEnergy*(1+abilityBonus('energy'))}
 function effectiveDefense(){const gear=Object.values(state.equipment).reduce((sum,item)=>sum+(Number(item?.defenseBonus)||0),0);return ((state.defense||0)+gear)*(1+abilityBonus('defense'))}
 function rarityRoll(){let tier=0;const quality=1+abilityBonus('rarity');if(Math.random()<Math.min(.95,.5*quality))tier=1;if(tier>=1&&Math.random()<Math.min(.95,.5*quality))tier=2;if(tier>=2&&Math.random()<Math.min(.95,.5*quality))tier=3;if(tier>=3&&Math.random()<Math.min(.95,.4*quality))tier=4;return rarities[tier]}
 window.GameAPI={
  getSkillSnapshot(){return{level:state.level,abilityPoints:state.abilityPoints,purchased:[...state.skillNodes]}},
- purchaseSkillNode(node){if(!node||typeof node.id!=='string'||!Number.isInteger(node.cost)||node.cost<1||state.skillNodes.includes(node.id)||state.abilityPoints<node.cost)return false;const hpBefore=effectiveMaxHp(),manaBefore=effectiveMaxMana();state.abilityPoints-=node.cost;state.skillNodes.push(node.id);state.hp=Math.min(effectiveMaxHp(),state.hp+effectiveMaxHp()-hpBefore);state.mana=Math.min(effectiveMaxMana(),state.mana+effectiveMaxMana()-manaBefore);render();return true},
+ purchaseSkillNode(node){if(!node||typeof node.id!=='string'||!Number.isInteger(node.cost)||node.cost<1||state.skillNodes.includes(node.id)||state.abilityPoints<node.cost)return false;const hpBefore=effectiveMaxHp(),energyBefore=effectiveMaxEnergy();state.abilityPoints-=node.cost;state.skillNodes.push(node.id);state.hp=Math.min(effectiveMaxHp(),state.hp+effectiveMaxHp()-hpBefore);state.energy=Math.min(effectiveMaxEnergy(),state.energy+effectiveMaxEnergy()-energyBefore);render();return true},
  refresh(){render()}
 };
-function renderBag(){ $('equipSlots').innerHTML=slots.map(s=>{const item=state.equipment[s];return `<div class="slot ${item?'rarity-'+item.key:''}" data-equip="${s}" tabindex="${item?'0':'-1'}" role="${item?'button':'presentation'}">${s}<b>${item?.name||'—'}</b></div>`}).join('');$('inventorySlots').innerHTML=Array.from({length:Math.max(24+(state.bagBonus||0),state.inventory.length)},(_,i)=>{const x=state.inventory[i];return `<div class="slot ${x?'rarity-'+x.key:''}" data-item="${i}" tabindex="${x?'0':'-1'}" role="${x?'button':'presentation'}">${i+1}<b>${x?x.name:'Пусто'}</b></div>`}).join('');$('bagCount').textContent=`Рюкзак · ${24+(state.bagBonus||0)} слотов · ${state.inventory.length} предметов`;document.querySelectorAll('#inventorySlots [data-item]').forEach(el=>el.draggable=!!state.inventory[Number(el.dataset.item)]);scheduleSave()}
+function itemEmoji(item){return ({'Оружие':'⚔️','Обувь':'🥾','Ноги':'🦵','Торс':'🛡️','Шлем':'🪖','Рюкзак':'🎒'})[item?.type]||'🎒'}
+function renderBag(){ $('equipSlots').innerHTML=slots.map(s=>{const item=state.equipment[s];return `<div class="slot ${item?'rarity-'+item.key:''}" data-equip="${s}" tabindex="${item?'0':'-1'}" role="${item?'button':'presentation'}">${s}<b>${item?`<span class="item-thumb" data-game-image="${item.type}" data-fallback="${itemEmoji(item)}">${itemEmoji(item)}</span>${item.name}`:'—'}</b></div>`}).join('');$('inventorySlots').innerHTML=Array.from({length:Math.max(24+(state.bagBonus||0),state.inventory.length)},(_,i)=>{const x=state.inventory[i];return `<div class="slot ${x?'rarity-'+x.key:''}" data-item="${i}" tabindex="${x?'0':'-1'}" role="${x?'button':'presentation'}">${i+1}<b>${x?`<span class="item-thumb" data-game-image="${x.type}" data-fallback="${itemEmoji(x)}">${itemEmoji(x)}</span>${x.name}`:'Пусто'}</b></div>`}).join('');$('bagCount').textContent=`Рюкзак · ${24+(state.bagBonus||0)} слотов · ${state.inventory.length} предметов`;document.querySelectorAll('#inventorySlots [data-item],#equipSlots [data-equip]').forEach(el=>el.draggable=false);document.querySelectorAll('[data-game-image]').forEach(el=>window.GameImages?.show(el,el.dataset.gameImage,el.dataset.fallback));scheduleSave()}
 function openItemDetails(item,equipped=false){
  if(!item)return;
  const rarity=rarities.find(([,key])=>key===item.key)||rarities[0];
  $('itemDetailTitle').textContent=item.name||item.type||'Предмет';
+ window.GameImages?.show($('itemDetailImage'),item.type,itemEmoji(item),$('itemImageCredit'));
  const rarityTag=$('itemDetailRarity');rarityTag.className=`item-detail-rarity rarity-${rarity[1]}`;rarityTag.textContent=`${rarity[0]} редкость · ${equipped?'Экипировано':'В инвентаре'}`;
  const body=$('itemDetailBody');body.replaceChildren();
  const info=document.createElement('p');info.className='sub';info.textContent=`Тип: ${item.type||'Предмет экипировки'}. ${equipped?'Предмет надет на персонажа.':'Перетащи предмет в соответствующий слот, чтобы надеть.'}`;body.append(info);
@@ -90,24 +93,24 @@ window.addEventListener('firebase:players',event=>{
 function addChat(t){const p=document.createElement('p');p.textContent=t;$('chatlog').append(p);$('chatlog').scrollTop=$('chatlog').scrollHeight}
 function renderChatPeers(){const n=Object.values(peers).filter(p=>map.distance(pos,p.pos)<=1000).length;$('chatlog').dataset.near=n;const first=$('chatlog').querySelector('p');if(first&&first.textContent.startsWith('Игроки поблизости'))first.textContent=`Игроков рядом (1000 м): ${n}. Чат доступен в радиусе 150 м.`}
 const foes=[
- {name:'Дикий слизень',icon:'🟢',hp:28,atk:6,def:0,xp:25,coins:8},
- {name:'Подворотный гоблин',icon:'👺',hp:42,atk:9,def:2,xp:38,coins:13},
- {name:'Теневой волк',icon:'🐺',hp:55,atk:12,def:3,xp:50,coins:18},
- {name:'Малый голем',icon:'🗿',hp:72,atk:14,def:6,xp:65,coins:24}
+ {name:'Дикий слизень',icon:'🟢',imageKey:'slime',hp:28,atk:6,def:0,xp:25,coins:8},
+ {name:'Подворотный гоблин',icon:'👺',imageKey:'goblin',hp:42,atk:9,def:2,xp:38,coins:13},
+ {name:'Теневой волк',icon:'🐺',imageKey:'wolf',hp:55,atk:12,def:3,xp:50,coins:18},
+ {name:'Малый голем',icon:'🗿',imageKey:'golem',hp:72,atk:14,def:6,xp:65,coins:24}
 ];
 function log(msg,kind=''){const p=document.createElement('p');p.textContent=msg;if(kind)p.className=kind;$('log').prepend(p);while($('log').children.length>18)$('log').lastChild.remove();scheduleSave()}
 function render(){
  $('levelText').textContent=`Уровень ${state.level} · ${['Новичок','Искатель','Следопыт','Ветеран','Герой'][Math.min(state.level-1,4)]}`;
- const need=state.level*100;
- const maxHp=effectiveMaxHp(),maxMana=effectiveMaxMana();
+ const need=xpToNextLevel();
+ const maxHp=effectiveMaxHp(),maxEnergy=effectiveMaxEnergy();
  $('xpText').textContent=`${formatGameNumber(state.xp)} / ${formatGameNumber(need)} опыта`;$('xpBar').style.width=Math.min(100,state.xp/need*100)+'%';
  $('hpText').textContent=`${formatGameNumber(state.hp)} / ${formatGameNumber(maxHp)}`;$('hpBar').style.width=Math.max(0,state.hp/maxHp*100)+'%';
  $('atkText').textContent=formatGameNumber(totalAttack());$('coinText').textContent=formatGameNumber(state.coins);
- $('defText').textContent=formatGameNumber(effectiveDefense());$('hudManaText').textContent=`${formatGameNumber(state.mana)} / ${formatGameNumber(maxMana)}`;
+ $('defText').textContent=formatGameNumber(effectiveDefense());$('hudEnergyText').textContent=`${formatGameNumber(state.energy)} / ${formatGameNumber(maxEnergy)}`;
  $('distanceText').textContent=distance<1000?`${formatGameNumber(distance)} м`:`${formatGameNumber(distance/1000)} км`;
- $('manaText')&&($('manaText').textContent=`${formatGameNumber(state.mana)} / ${formatGameNumber(maxMana)}`);
+ $('energyText')&&($('energyText').textContent=`${formatGameNumber(state.energy)} / ${formatGameNumber(maxEnergy)}`);
  $('potionBtn').textContent=`🧪 Лечиться (${state.potions})`;$('potionBtn').disabled=state.potions<1||state.hp>=maxHp;
- $('spellBtn').disabled=state.mana<15||!enemy; if(!$('enemyCard').classList.contains('show'))$('enemyCard').classList.remove('show');renderStats();
+ $('slashBtn').disabled=state.energy<15||!enemy; if(!$('enemyCard').classList.contains('show'))$('enemyCard').classList.remove('show');renderStats();
  if(!$('merchantPanel').classList.contains('hidden'))renderMerchantShop();
  scheduleSave();
  window.dispatchEvent(new Event('game:stats-updated'));
@@ -220,12 +223,12 @@ function sellMerchantItem(index){
  const [item]=state.inventory.splice(index,1),earned=salePrice(item);state.coins+=earned;log(`Продано: ${item.name} за ${formatGameNumber(earned)} монет.`,'good');renderBag();render();renderMerchantShop();
 }
 function restoreMonsters(){if(!Array.isArray(savedGame.monsters))return;for(const m of savedGame.monsters.slice(0,25)){if(!m||!Array.isArray(m.pos)||m.pos.length!==2||!m.pos.every(Number.isFinite))continue;const monster={...m};placeMonsterMarker(monster);monsters.push(monster)}}
-function selectEnemy(monster){if(enemy&&enemy!==monster&&turn==='enemy'){log('Дождись завершения хода противника.');return}combatId++;enemy=monster;enemyMarker=monster.marker;turn='player';$('attackBtn').disabled=false;$('spellBtn').disabled=state.mana<15;$('enemyCard').classList.add('show');$('enemyIcon').textContent=enemy.icon;$('enemyName').textContent=enemy.name;$('enemyHint').textContent='Противник выбран';$('enemyLevel').textContent=enemy.level;$('enemyAttack').textContent=enemy.atk;$('enemyDefense').textContent=enemy.def;$('combatStatus').textContent='Твой ход.';renderEnemy();render()}
+function selectEnemy(monster){if(enemy&&enemy!==monster&&turn==='enemy'){log('Дождись завершения хода противника.');return}combatId++;enemy=monster;enemyMarker=monster.marker;turn='player';$('attackBtn').disabled=false;$('slashBtn').disabled=state.energy<15;$('enemyCard').classList.add('show');window.GameImages?.show($('enemyIcon'),enemy.imageKey||'slime',enemy.icon,$('enemyImageCredit'));$('enemyName').textContent=enemy.name;$('enemyHint').textContent='Противник выбран';$('enemyLevel').textContent=enemy.level;$('enemyAttack').textContent=enemy.atk;$('enemyDefense').textContent=enemy.def;$('combatStatus').textContent='Твой ход.';renderEnemy();render()}
 function closeCombat(){
  if(enemy){enemy.hp=enemy.maxHp;log(`${enemy.name} восстановил здоровье. Сражение прекращено.`);}
- combatId++;enemy=null;enemyMarker=null;turn='player';$('enemyCard').classList.remove('show');$('attackBtn').disabled=false;$('spellBtn').disabled=state.mana<15;$('combatStatus').textContent='Сражение прекращено. Выбери противника, чтобы начать снова.';scheduleSave();
+ combatId++;enemy=null;enemyMarker=null;turn='player';$('enemyCard').classList.remove('show');$('attackBtn').disabled=false;$('slashBtn').disabled=state.energy<15;$('combatStatus').textContent='Сражение прекращено. Выбери противника, чтобы начать снова.';scheduleSave();
 }
-function handlePlayerDeath(){const lost=state.coins*.5;state.coins-=lost;state.hp=Math.max(1,effectiveMaxHp()*.35);log(`Ты погиб и потерял ${formatGameNumber(lost)} монет (50%). Здоровье восстановлено у безопасного места.`,'bad')}
+function handlePlayerDeath(){closeCombat();const lost=state.coins*.5;state.coins-=lost;state.hp=Math.max(1,effectiveMaxHp()*.35);log(`Ты погиб и потерял ${formatGameNumber(lost)} монет (50%). Здоровье восстановлено у безопасного места.`,'bad')}
 function renderEnemy(){if(!enemy)return;$('enemyHpText').textContent=`${formatGameNumber(enemy.hp)} / ${formatGameNumber(enemy.maxHp)} HP`;$('enemyHpStat').textContent=`${formatGameNumber(enemy.hp)} / ${formatGameNumber(enemy.maxHp)}`;$('enemyHpBar').style.width=Math.max(0,enemy.hp/enemy.maxHp*100)+'%'}
 function finishEnemy(){
  if(!enemy||!monsters.includes(enemy))return;
@@ -241,9 +244,9 @@ function finishEnemy(){
   else log('Предмет выпал, но рюкзак полон.','bad');
  }
  $('combatStatus').textContent=`Победа! Получено ${formatGameNumber(defeated.xp)} опыта и ${formatGameNumber(earnedGold)} монет.`;
- if(defeated.marker)map.removeLayer(defeated.marker);monsters=monsters.filter(m=>m!==defeated);enemy=null;enemyMarker=null;$('enemyCard').classList.remove('show');turn='player';$('attackBtn').disabled=false;$('spellBtn').disabled=false;
- let need=state.level*100;
- while(state.xp>=need){state.xp-=need;state.level++;state.abilityPoints++;state.maxHp+=15;state.hp=effectiveMaxHp();state.attack+=3;state.potions=Math.min(10,state.potions+1);log(`Новый уровень ${state.level}! +1 Ability Point, здоровье восстановлено, атака +3.`,'good');need=state.level*100;}
+ if(defeated.marker)map.removeLayer(defeated.marker);monsters=monsters.filter(m=>m!==defeated);enemy=null;enemyMarker=null;$('enemyCard').classList.remove('show');turn='player';$('attackBtn').disabled=false;$('slashBtn').disabled=state.energy<15;
+ let need=xpToNextLevel();
+ while(state.xp>=need){state.xp-=need;state.level++;state.abilityPoints++;state.maxHp+=15;state.hp=effectiveMaxHp();state.attack+=3;state.potions=Math.min(10,state.potions+1);log(`Новый уровень ${state.level}! +1 Ability Point, здоровье восстановлено, атака +3.`,'good');need=xpToNextLevel();}
  render()
 }
 $('attackBtn').addEventListener('click',()=>{
@@ -252,18 +255,18 @@ $('attackBtn').addEventListener('click',()=>{
  const dmg= Math.max(1,totalAttack()+Math.floor(Math.random()*7)-3-(enemy.def||0));enemy.hp=Math.max(0,enemy.hp-dmg);
  log(`Ты наносишь ${formatGameNumber(dmg)} урона врагу.`,'good');
  if(enemy.hp<=0){renderEnemy();finishEnemy();return;}setTimeout(()=>{if(combatId!==activeCombat||enemy!==target)return;const hit=Math.max(1,target.atk+Math.floor(Math.random()*5)-2-effectiveDefense());state.hp=Math.max(0,state.hp-hit);log(`${target.name} отвечает и наносит ${formatGameNumber(hit)} урона с учётом защиты.`,'bad');
- if(state.hp<=0)handlePlayerDeath();
+ if(state.hp<=0){handlePlayerDeath();render();return}
  renderEnemy();render();$('combatStatus').textContent='Твой ход.';turn='player';$('attackBtn').disabled=false;},1000);
 });
 $('potionBtn').addEventListener('click',()=>{const maxHp=effectiveMaxHp();if(state.potions<1||state.hp>=maxHp||turn!=='player')return;state.potions--;const heal=Math.min(35,maxHp-state.hp);state.hp+=heal;log(`Зелье восстановило ${formatGameNumber(heal)} HP.`,'good');render()});
-$('spellBtn').addEventListener('click',()=>{
- if(!enemy||turn!=='player'||state.mana<15)return;
- const target=enemy,activeCombat=combatId;turn='enemy';state.mana-=15;
- const spellDamage=24*(1+abilityBonus('attack'));enemy.hp=Math.max(0,enemy.hp-spellDamage);
- log(`Искра наносит ${formatGameNumber(spellDamage)} урона и тратит ${formatGameNumber(15)} маны.`,'good');renderEnemy();render();
+$('slashBtn').addEventListener('click',()=>{
+ if(!enemy||turn!=='player'||state.energy<15)return;
+ const target=enemy,activeCombat=combatId;turn='enemy';state.energy-=15;
+ const slashDamage=Math.max(1,totalAttack()*1.5+Math.floor(Math.random()*6)-target.def);enemy.hp=Math.max(0,enemy.hp-slashDamage);
+ log(`Рассечение наносит ${formatGameNumber(slashDamage)} физического урона и тратит ${formatGameNumber(15)} энергии.`,'good');renderEnemy();render();
  if(enemy.hp<=0){finishEnemy();turn='player';return}
- $('attackBtn').disabled=true;$('spellBtn').disabled=true;$('combatStatus').textContent='Заклинание сработало. Ход противника через 1 секунду…';
- setTimeout(()=>{if(combatId!==activeCombat||enemy!==target)return;const hit=Math.max(1,target.atk+Math.floor(Math.random()*5)-2-effectiveDefense());state.hp=Math.max(0,state.hp-hit);log(`${target.name} отвечает и наносит ${formatGameNumber(hit)} урона с учётом защиты.`,'bad');if(state.hp<=0)handlePlayerDeath();turn='player';$('attackBtn').disabled=false;$('spellBtn').disabled=state.mana<15;$('combatStatus').textContent='Твой ход.';render()},1000)
+ $('attackBtn').disabled=true;$('slashBtn').disabled=true;$('combatStatus').textContent='Рассечение выполнено. Ход противника через 1 секунду…';
+ setTimeout(()=>{if(combatId!==activeCombat||enemy!==target)return;const hit=Math.max(1,target.atk+Math.floor(Math.random()*5)-2-effectiveDefense());state.hp=Math.max(0,state.hp-hit);log(`${target.name} отвечает и наносит ${formatGameNumber(hit)} урона с учётом защиты.`,'bad');if(state.hp<=0){handlePlayerDeath();render();return}turn='player';$('attackBtn').disabled=false;$('slashBtn').disabled=state.energy<15;$('combatStatus').textContent='Твой ход.';render()},1000)
 });
 $('centerBtn').addEventListener('click',()=>map.setView(pos,17));
 $('devModeBtn').addEventListener('click',e=>{devMode=!devMode;e.currentTarget.textContent=`🛠 Режим разработчика: ${devMode?'вкл.':'выкл.'} · ${devMode?'кликни по карте для телепорта':''}`;});
@@ -272,26 +275,28 @@ $('chatSend').addEventListener('click',()=>{const text=$('chatInput').value.trim
 $('chatInput').addEventListener('keydown',e=>{if(e.key==='Enter')$('chatSend').click()});
 $('merchantGoods').addEventListener('click',event=>{const button=event.target.closest('[data-buy]');if(button)buyMerchantOffer(button.dataset.buy)});
 $('merchantSellList').addEventListener('click',event=>{const button=event.target.closest('[data-sell]');if(button)sellMerchantItem(Number(button.dataset.sell))});
-$('inventorySlots').addEventListener('pointerdown',e=>{const slot=e.target.closest('[data-item]');if(!slot||!state.inventory[Number(slot.dataset.item)])return;slot.dataset.dragIndex=slot.dataset.item;slot.classList.add('dragging')});
-$('equipSlots').addEventListener('pointerdown',e=>{const slot=e.target.closest('[data-equip]');if(!slot||!state.equipment[slot.dataset.equip])return;slot.dataset.dragEquip=slot.dataset.equip;slot.classList.add('dragging')});
+function startItemDrag(event,slot,item,kind){if(event.button!==undefined&&event.button!==0)return;event.preventDefault();activeItemDrag={pointerId:event.pointerId,slot,item,kind,startX:event.clientX,startY:event.clientY,moved:false,ghost:null};slot.classList.add('dragging');if(kind==='inventory')slot.dataset.dragIndex=slot.dataset.item;else slot.dataset.dragEquip=slot.dataset.equip;try{slot.setPointerCapture(event.pointerId)}catch{}}
+$('inventorySlots').addEventListener('pointerdown',e=>{const slot=e.target.closest('[data-item]');if(!slot)return;const item=state.inventory[Number(slot.dataset.item)];if(item)startItemDrag(e,slot,item,'inventory')});
+$('equipSlots').addEventListener('pointerdown',e=>{const slot=e.target.closest('[data-equip]');if(!slot)return;const item=state.equipment[slot.dataset.equip];if(item)startItemDrag(e,slot,item,'equipment')});
 document.addEventListener('pointerup',e=>{
- const dragged=document.querySelector('.slot.dragging');if(!dragged)return;
- dragged.classList.remove('dragging');
+ const drag=activeItemDrag,dragged=drag?.slot;if(!dragged)return;
+ activeItemDrag=null;drag.ghost?.remove();dragged.classList.remove('dragging');
  $('trashSlot').classList.remove('drop-target');
- const target=document.elementFromPoint(e.clientX,e.clientY);
+ document.querySelectorAll('.drop-target').forEach(el=>el.classList.remove('drop-target'));
+ const target=document.elementFromPoint(e.clientX,e.clientY);if(!drag.moved){if(drag.kind==='inventory')openItemDetails(drag.item);else openItemDetails(drag.item,true);return;}
  if(dragged.dataset.dragIndex!==undefined){
   const index=Number(dragged.dataset.dragIndex),item=state.inventory[index];if(!item)return;
   if(target?.closest('#trashSlot')){state.inventory.splice(index,1);renderBag();render();log(`Удалён предмет: ${item.name}.`,'bad');return;}
-  const sameItem=target?.closest('[data-item]');if(sameItem&&Number(sameItem.dataset.item)===index){openItemDetails(item);return;}
   const equip=target?.closest('[data-equip]');if(!equip||equip.dataset.equip!==item.type)return;
   const old=state.equipment[item.type];state.equipment[item.type]=item;state.inventory.splice(index,1);if(item.type==='Рюкзак'&&!old)state.bagBonus=(state.bagBonus||0)+8;if(old)state.inventory.push(old);renderBag();render();log(`Надето: ${item.name}.`,'good');
  }else if(dragged.dataset.dragEquip){
-  const type=dragged.dataset.dragEquip,item=state.equipment[type];if(target?.closest('[data-equip]')?.dataset.equip===type){openItemDetails(item,true);return;}
+  const type=dragged.dataset.dragEquip,item=state.equipment[type];
   const bag=target?.closest('#inventorySlots');if(!bag||!item||state.inventory.length>=24+(state.bagBonus||0))return;
   state.inventory.push(item);delete state.equipment[type];if(type==='Рюкзак')state.bagBonus=Math.max(0,(state.bagBonus||0)-8);renderBag();render();log(`Снято: ${item.name}.`);
  }
 });
-document.addEventListener('pointermove',e=>{if(!document.querySelector('.slot.dragging'))return;const over=document.elementFromPoint(e.clientX,e.clientY)?.closest('#trashSlot');$('trashSlot').classList.toggle('drop-target',!!over)});
+document.addEventListener('pointermove',e=>{const drag=activeItemDrag;if(!drag||e.pointerId!==drag.pointerId)return;if(!drag.moved&&Math.hypot(e.clientX-drag.startX,e.clientY-drag.startY)>7){drag.moved=true;const ghost=drag.slot.cloneNode(true);ghost.classList.remove('dragging');ghost.classList.add('drag-ghost');ghost.removeAttribute('data-item');ghost.removeAttribute('data-equip');ghost.removeAttribute('draggable');ghost.style.width=`${drag.slot.getBoundingClientRect().width}px`;document.body.append(ghost);drag.ghost=ghost}if(drag.ghost){drag.ghost.style.left=`${e.clientX-drag.ghost.offsetWidth/2}px`;drag.ghost.style.top=`${e.clientY-drag.ghost.offsetHeight/2}px`}const target=document.elementFromPoint(e.clientX,e.clientY),trash=target?.closest('#trashSlot'),equip=target?.closest('[data-equip]');$('trashSlot').classList.toggle('drop-target',!!trash&&drag.kind==='inventory');document.querySelectorAll('#equipSlots [data-equip]').forEach(el=>el.classList.toggle('drop-target',!!equip&&equip===el&&drag.item.type===el.dataset.equip))});
+document.addEventListener('pointercancel',()=>{if(!activeItemDrag)return;activeItemDrag.ghost?.remove();activeItemDrag.slot.classList.remove('dragging');activeItemDrag=null;$('trashSlot').classList.remove('drop-target');document.querySelectorAll('.drop-target').forEach(el=>el.classList.remove('drop-target'))});
 document.addEventListener('keydown',event=>{if(event.key!=='Enter'&&event.key!==' ')return;const slot=event.target.closest?.('[data-item],[data-equip]');if(!slot)return;const item=slot.dataset.item!==undefined?state.inventory[Number(slot.dataset.item)]:state.equipment[slot.dataset.equip];if(item){event.preventDefault();openItemDetails(item,slot.dataset.equip!==undefined)}});
 function gpsErrorText(error){if(error.code===1)return'Доступ к геопозиции запрещён. Разреши его в настройках сайта в браузере и нажми кнопку ещё раз.';if(error.code===2)return'Устройство пока не определило координаты. Включи геолокацию телефона и попробуй ещё раз.';return'Не удалось получить координаты вовремя. Проверь GPS и попробуй ещё раз.'}
 function unlockGame(){gpsAllowed=true;document.body.classList.remove('site-locked');$('gpsGate').classList.add('hidden');requestAnimationFrame(()=>map.invalidateSize())}
@@ -314,7 +319,7 @@ $('demoBtn').addEventListener('click',()=>{
  map.setView(pos,16);$('gpsHead').textContent='Демо-режим';$('gpsStatus').textContent='Демо-прогулка: персонаж переместился по карте. Нажимай ещё раз, чтобы исследовать район.';
 });
 setInterval(()=>{for(const [id,p] of Object.entries(peers))if(Date.now()-p.at>10000){delete peers[id];if(peerMarkers[id])map.removeLayer(peerMarkers[id]);delete peerMarkers[id]}syncPeer()},5000);
-setInterval(()=>{const maxHp=effectiveMaxHp(),maxMana=effectiveMaxMana();if(state.hp<maxHp&&!enemy)state.hp=Math.min(maxHp,state.hp+maxHp*.0025);if(state.mana<maxMana&&!enemy)state.mana=Math.min(maxMana,state.mana+maxMana*.0075);render()},1000);
+setInterval(()=>{const maxHp=effectiveMaxHp(),maxEnergy=effectiveMaxEnergy();if(state.hp<maxHp&&!enemy)state.hp=Math.min(maxHp,state.hp+maxHp*.0025);if(state.energy<maxEnergy&&!enemy)state.energy=Math.min(maxEnergy,state.energy+maxEnergy*.0075);render()},1000);
 setInterval(()=>{if(gpsAllowed&&gpsPositionReady&&!document.hidden&&monsters.length<25)spawnEnemy(false)},10000);
 window.addEventListener('resize',()=>requestAnimationFrame(()=>map.invalidateSize()));window.addEventListener('orientationchange',()=>setTimeout(()=>map.invalidateSize(),250));
 setupPanels();renderBag();
