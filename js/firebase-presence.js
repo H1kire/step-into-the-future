@@ -72,7 +72,7 @@ function watchProfile(user) {
   if (unsubscribeProfile) unsubscribeProfile();
   const profileRef = ref(database, `profiles/${user.uid}`);
   unsubscribeProfile = onValue(profileRef, snapshot => {
-    if (snapshot.exists()) { chatName = snapshot.val().nickname || `user${snapshot.val().accountNumber}`; dispatchAccount(user, snapshot.val()); publishPosition(); }
+    if (snapshot.exists()) { chatName = snapshot.val().nickname || `user${snapshot.val().accountNumber}`; if (lastPosition) lastPosition.name = chatName; dispatchAccount(user, snapshot.val()); publishPosition(); }
   }, error => {
     onlineStatus.textContent = 'Аккаунт: не удалось загрузить профиль';
     console.error('Firebase profile read failed', error);
@@ -105,6 +105,7 @@ onAuthStateChanged(auth, async user => {
     try {
       const profile = await ensureAccountProfile(user);
       chatName = profile.nickname || `user${profile.accountNumber}`;
+      if (lastPosition) lastPosition.name = chatName;
       dispatchAccount(user, profile);
       watchProfile(user);
     } catch (error) {
@@ -207,22 +208,40 @@ function setNicknameEditor(open) {
 document.getElementById('accountNickname')?.addEventListener('click', () => setNicknameEditor(true));
 document.getElementById('editNicknameBtn')?.addEventListener('click', () => setNicknameEditor(true));
 document.getElementById('cancelNicknameBtn')?.addEventListener('click', () => setNicknameEditor(false));
-document.getElementById('saveNicknameBtn')?.addEventListener('click', async () => {
+async function saveNickname() {
   const user = auth.currentUser;
   const input = document.getElementById('nicknameInput');
+  const button = document.getElementById('saveNicknameBtn');
+  const feedback = document.getElementById('nicknameFeedback');
   const nickname = input.value.trim();
   if (!user || user.isAnonymous) return;
-  if (!/^[\p{L}\p{N}_-]{2,20}$/u.test(nickname)) { onlineStatus.textContent = 'Ник: 2–20 букв, цифр, _ или -'; return; }
+  if (!/^[\p{L}\p{N}_-]{2,20}$/u.test(nickname)) { feedback.textContent = 'Ник: 2–20 букв, цифр, _ или -'; return; }
   const profileRef = ref(database, `profiles/${user.uid}`);
+  button.disabled = true;
+  button.textContent = 'Сохраняем…';
+  feedback.textContent = '';
   try {
     const snapshot = await get(profileRef);
     const profile = snapshot.val();
-    const remaining = 86400000 - (Date.now() - (profile?.nicknameChangedAt || 0));
-    if (remaining > 0) { onlineStatus.textContent = `Ник можно менять через ${Math.ceil(remaining / 3600000)} ч.`; return; }
+    if (!profile) throw new Error('Профиль не найден. Перезагрузи страницу и попробуй снова.');
+    if (nickname === profile.nickname) { feedback.textContent = 'Этот ник уже установлен.'; setNicknameEditor(false); return; }
+    const offsetSnapshot = await get(ref(database, '.info/serverTimeOffset'));
+    const serverNow = Date.now() + (Number(offsetSnapshot.val()) || 0);
+    const remaining = 86400000 - (serverNow - (profile.nicknameChangedAt || 0));
+    if (remaining > 0) { feedback.textContent = `Ник можно менять через ${Math.ceil(remaining / 3600000)} ч.`; return; }
     await update(profileRef, { nickname, nicknameChangedAt: serverTimestamp() });
     setNicknameEditor(false);
+    feedback.textContent = 'Ник успешно сохранён.';
   } catch (error) {
-    onlineStatus.textContent = 'Не удалось сменить ник — проверь Rules Firebase';
+    const code = String(error?.code || '');
+    feedback.textContent = code.includes('permission-denied')
+      ? 'Firebase отклонил изменение. Опубликуй актуальные Rules; если ник уже менялся, подожди 24 часа.'
+      : `Не удалось сохранить ник: ${error?.message || code || 'ошибка Firebase'}`;
     console.error('Firebase nickname update failed', error);
+  } finally {
+    button.disabled = false;
+    button.textContent = 'Сохранить';
   }
-});
+}
+document.addEventListener('click', event => { if (event.target.closest('#saveNicknameBtn')) saveNickname(); });
+document.addEventListener('keydown', event => { if (event.key === 'Enter' && event.target.matches('#nicknameInput')) saveNickname(); });
