@@ -113,7 +113,8 @@
       for (let i = 0; i < branch.lanes.length; i++) {
         const lane = branch.lanes[i], x = branch.xs[i];
         parts.push(`<path class="tree-link" stroke="${branch.color}" d="M ${branch.center} 82 C ${branch.center} 112, ${x} 112, ${x} ${firstY - 15}"/>`);
-        parts.push(`<text class="tree-lane-title" x="${x}" y="125" text-anchor="middle">${lane.title}</text>`);
+        const laneTitle = lane.id === 'energy' ? window.GameAPI.getResourceName() : lane.title;
+        parts.push(`<text class="tree-lane-title" x="${x}" y="125" text-anchor="middle">${laneTitle}</text>`);
       }
     }
     for (const node of nodes) {
@@ -140,9 +141,11 @@
     const status = nodeStatus(node, purchased, current.abilityPoints);
     const currentTotal = bonuses(current.purchased);
     const afterTotal = bonuses([...current.purchased, node.id]);
-    const labels = { attack: 'атака', health: 'здоровье', energy: 'энергия', defense: 'защита', drop: 'шанс лута', gold: 'золото', rarity: 'редкость' };
+    const labels = { attack: 'атака', health: 'здоровье', energy: window.GameAPI.getResourceName().toLowerCase(), defense: 'защита', drop: 'шанс лута', gold: 'золото', rarity: 'редкость' };
     const totalText = Object.keys(afterTotal).filter(key => afterTotal[key] !== currentTotal[key]).map(key => `${labels[key]}: ${format(currentTotal[key] * 100)}% → ${format(afterTotal[key] * 100)}%`).join(' · ');
-    detail.innerHTML = `<b>${node.branch.title} · ${node.lane.title} ${node.depth}</b><br>${node.detail} за узел.<br>Суммарный бонус после покупки: ${totalText}.<br>Стоимость: ${format(node.cost)} Ability Points.`;
+    const laneTitle = node.lane.id === 'energy' ? window.GameAPI.getResourceName() : node.lane.title;
+    const nodeDetail = node.lane.id === 'energy' ? node.detail.replace(/энергии/gi, window.GameAPI.getResourceName().toLowerCase()) : node.detail;
+    detail.innerHTML = `<b>${node.branch.title} · ${laneTitle} ${node.depth}</b><br>${nodeDetail} за узел.<br>Суммарный бонус после покупки: ${totalText}.<br>Стоимость: ${format(node.cost)} Ability Points.`;
     buyButton.disabled = status !== 'available';
     buyButton.textContent = status === 'purchased' ? 'Уже улучшено' : status === 'locked' ? 'Сначала открой предыдущий узел' : status === 'affordable-later' ? `Нужно ${format(node.cost)} Ability Points` : 'Улучшить';
   }

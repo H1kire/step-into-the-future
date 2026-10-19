@@ -14,12 +14,23 @@
     'Рюкзак': 'fantasy adventurer backpack game art'
   };
   const fallback = { slime: '🟢', goblin: '👺', wolf: '🐺', golem: '🗿', 'Оружие': '⚔️', 'Обувь': '🥾', 'Ноги': '🦵', 'Торс': '🛡️', 'Шлем': '🪖', 'Рюкзак': '🎒' };
+  const itemIcons = {
+    'Оружие': ['sword-clash', 'Lorc'], '2 рука': ['crenulated-shield', 'Lorc'], 'Обувь': ['boots', 'Lorc'],
+    'Ноги': ['greaves', 'Delapouite'], 'Торс': ['breastplate', 'Lorc'], 'Шлем': ['barbute', 'Lorc'], 'Рюкзак': ['backpack', 'Delapouite']
+  };
   const pending = new Map();
   let cache = {};
   try { cache = JSON.parse(localStorage.getItem(CACHE_KEY) || '{}') || {}; } catch {}
 
   function getImage(kind) {
     const key = String(kind || '').toLowerCase();
+    const gameIcon = itemIcons[kind];
+    if (gameIcon) {
+      const [icon, creator] = gameIcon;
+      const slug = icon;
+      const author = creator.toLowerCase();
+      return Promise.resolve({ src: `https://api.iconify.design/game-icons/${slug}.svg?color=%23ffd166`, page: `https://game-icons.net/1x1/${author}/${slug}.html`, license: 'CC BY 3.0', licenseUrl: 'https://creativecommons.org/licenses/by/3.0/', creator });
+    }
     const cached = cache[key];
     if (cached && Date.now() - cached.savedAt < CACHE_TTL) return Promise.resolve(cached.image);
     if (pending.has(key)) return pending.get(key);
