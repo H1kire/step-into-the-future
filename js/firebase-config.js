@@ -11,3 +11,7 @@ export const firebaseConfig = {
 
 // Add a reCAPTCHA v3 site key after registering App Check; leave empty until configured.
 export const appCheckSiteKey = '';
+
+// Paste your Firebase Authentication UID here after signing in with Google.
+// Keep this empty until you have confirmed the UID in the game menu.
+export const developerUid = '';
