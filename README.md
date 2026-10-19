@@ -14,9 +14,7 @@
 ## Firebase: защита и публикация
 
 1. В Firebase Authentication включён Anonymous sign-in, а в Authorized domains добавлен домен GitHub Pages.
-2. В Realtime Database → Rules опубликуй содержимое `firebase-database.rules.json`. Правила разрешают читать позиции вошедшим игрокам, но каждый пользователь может создавать, менять и удалять только запись со своим Firebase UID. Не включай публичные `.read: true` или `.write: true`.
-3. Конфигурация из `js/firebase-config.js` предназначена для браузера и видна посетителям сайта. Firebase API key идентифицирует проект, но не даёт доступ к данным сам по себе. Не добавляй сюда service-account JSON или приватные серверные ключи.
-4. Для дополнительной защиты от запросов в обход сайта настрой Firebase App Check с reCAPTCHA v3. Зарегистрируй домен GitHub Pages в reCAPTCHA, добавь секретный ключ только в Firebase Console → App Check, а публичный site key внеси в `appCheckSiteKey` в `js/firebase-config.js`. Опубликуй файлы и проверь метрики App Check; затем включи Enforcement для Realtime Database и Authentication. Пока site key пустой, клиент не отправляет токен App Check, поэтому enforcement включать нельзя.
+2.Конфигурация из `js/firebase-config.js` предназначена для браузера и видна посетителям сайта. Firebase API key идентифицирует проект, но не даёт доступ к данным сам по себе. Не добавляй сюда service-account JSON или приватные серверные ключи.
 
 Firebase Security Rules проверяются на сервере. App Check дополняет их и затрудняет использование базы сторонними скриптами, но не делает публичный клиент полностью доверенным и не подтверждает правдивость GPS-координат.
 
