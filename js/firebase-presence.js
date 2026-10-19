@@ -15,7 +15,7 @@ const database = getDatabase(app);
 window.addEventListener('game:position', event => {
   const { lat, lng, name } = event.detail || {};
   if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
-  lastPosition = { lat, lng, name: String(name || 'Странник').slice(0, 24) };
+  lastPosition = { lat, lng, name: String(chatName || name || 'Странник').slice(0, 24) };
   publishPosition();
 });
 
@@ -72,7 +72,7 @@ function watchProfile(user) {
   if (unsubscribeProfile) unsubscribeProfile();
   const profileRef = ref(database, `profiles/${user.uid}`);
   unsubscribeProfile = onValue(profileRef, snapshot => {
-    if (snapshot.exists()) { chatName = snapshot.val().nickname || `user${snapshot.val().accountNumber}`; dispatchAccount(user, snapshot.val()); }
+    if (snapshot.exists()) { chatName = snapshot.val().nickname || `user${snapshot.val().accountNumber}`; dispatchAccount(user, snapshot.val()); publishPosition(); }
   }, error => {
     onlineStatus.textContent = 'Аккаунт: не удалось загрузить профиль';
     console.error('Firebase profile read failed', error);

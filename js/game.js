@@ -98,8 +98,8 @@ window.addEventListener('firebase:players',event=>{
  const online=event.detail||{},now=Date.now();
  for(const [id,p] of Object.entries(online)){
   if(!p||id===window.firebasePlayerUid||!Number.isFinite(p.lat)||!Number.isFinite(p.lng)||!Number.isFinite(p.updatedAt)||now-p.updatedAt>30000)continue;
-  const point=[p.lat,p.lng];if(map.distance(pos,point)>1000){if(onlineMarkers[id]){map.removeLayer(onlineMarkers[id]);delete onlineMarkers[id]}continue}
-  if(!onlineMarkers[id])onlineMarkers[id]=L.marker(point,{icon:L.divIcon({className:'',html:'<div class="marker youmarker">🧝</div>',iconSize:[42,42],iconAnchor:[21,21]})}).addTo(map).bindPopup('Игрок: '+String(p.name||'Странник').slice(0,24));else onlineMarkers[id].setLatLng(point);
+  const point=[p.lat,p.lng],playerName=String(p.name||'Странник').slice(0,24),popupText='Игрок: '+playerName;if(map.distance(pos,point)>1000){if(onlineMarkers[id]){map.removeLayer(onlineMarkers[id]);delete onlineMarkers[id]}continue}
+  if(!onlineMarkers[id])onlineMarkers[id]=L.marker(point,{icon:L.divIcon({className:'',html:'<div class="marker youmarker">🧝</div>',iconSize:[42,42],iconAnchor:[21,21]})}).addTo(map).bindPopup(popupText);else onlineMarkers[id].setLatLng(point).setPopupContent(popupText);
  }
  for(const [id,marker] of Object.entries(onlineMarkers)){if(!online[id]||now-(online[id]?.updatedAt||0)>30000){map.removeLayer(marker);delete onlineMarkers[id]}}
  renderChatPeers();
