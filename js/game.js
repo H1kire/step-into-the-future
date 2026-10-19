@@ -84,6 +84,7 @@ function render(){
  window.dispatchEvent(new Event('game:stats-updated'));
 }
 function updatePos(latlng,source='GPS'){
+ const hadPosition=gpsPositionReady;
  const next=[latlng.lat,latlng.lng];
  if(source==='GPS'){
   const accuracy=Number(latlng.accuracy);if(!Number.isFinite(accuracy)||accuracy>100){gpsCandidate=null;gpsCandidateCount=0;$('gpsHead').textContent='Слабый GPS';$('gpsBtn').textContent='🛰 Ждём точный GPS';$('gpsStatus').textContent=`Слабый сигнал GPS (точность ±${Number.isFinite(accuracy)?Math.round(accuracy):'—'} м). Включи точную геопозицию телефона и подожди более точный сигнал.`;return false}
@@ -109,11 +110,13 @@ function updatePos(latlng,source='GPS'){
  const distanceFrom=source==='GPS'?lastGpsPos:null;if(distanceFrom){const d=map.distance(distanceFrom,next);if(d<100000)distance+=d;}
  if(source==='GPS')lastGpsPos=next;
  lastPos=next;pos=next;gpsPositionReady=true;playerMarker.setLatLng(pos);if(source==='GPS'&&!gpsInitialCentered){map.setView(pos,Math.max(map.getZoom(),16));gpsInitialCentered=true}
+ cleanupDistantMonsters();
  $('coords').textContent=`${pos[0].toFixed(5)}, ${pos[1].toFixed(5)}`;
  $('mapState').textContent=source==='GPS'?'GPS активен':'Демо-режим';
  if(source==='GPS'){$('gpsHead').textContent='GPS подключён';$('gpsBtn').textContent='✅ GPS подключён';$('gpsStatus').innerHTML='<strong>Геопозиция получена.</strong> Двигайся по городу, чтобы исследовать карту.';}
  render();
  syncPeer();syncOnline();
+ if(!hadPosition&&monsters.length===0&&(gpsAllowed||source==='DEMO'))spawnEnemy(false);
  return true;
 }
 function spawnEnemy(force=true){
@@ -128,6 +131,14 @@ function spawnEnemy(force=true){
  log(`На карте появился противник: ${f.name}. Нажми на него, чтобы начать бой.`,'bad');render();
 }
 function placeMonsterMarker(monster){monster.marker=L.marker(monster.pos,{icon:enemyIcon}).addTo(map);monster.marker.bindTooltip(`${monster.icon} ${monster.name}`);monster.marker.on('click',e=>{L.DomEvent.stopPropagation(e);selectEnemy(monster)})}
+function cleanupDistantMonsters(){
+ const nearby=[];
+ for(const monster of monsters){
+  if(monster===enemy||map.distance(pos,monster.pos)<=150){nearby.push(monster);continue;}
+  if(monster.marker)map.removeLayer(monster.marker);
+ }
+ if(nearby.length!==monsters.length){monsters=nearby;scheduleSave()}
+}
 function restoreMonsters(){if(!Array.isArray(savedGame.monsters))return;for(const m of savedGame.monsters.slice(0,25)){if(!m||!Array.isArray(m.pos)||m.pos.length!==2||!m.pos.every(Number.isFinite))continue;const monster={...m};placeMonsterMarker(monster);monsters.push(monster)}}
 function selectEnemy(monster){if(enemy&&enemy!==monster&&turn==='enemy'){log('Дождись завершения хода противника.');return}enemy=monster;enemyMarker=monster.marker;turn='player';$('attackBtn').disabled=false;$('spellBtn').disabled=state.mana<15;$('enemyCard').classList.add('show');$('enemyIcon').textContent=enemy.icon;$('enemyName').textContent=enemy.name;$('enemyHint').textContent='Противник выбран';$('enemyLevel').textContent=enemy.level;$('enemyAttack').textContent=enemy.atk;$('enemyDefense').textContent=enemy.def;$('combatStatus').textContent='Твой ход.';renderEnemy();render()}
 function renderEnemy(){if(!enemy)return;$('enemyHpText').textContent=`${formatGameNumber(enemy.hp)} / ${formatGameNumber(enemy.maxHp)} HP`;$('enemyHpStat').textContent=`${formatGameNumber(enemy.hp)} / ${formatGameNumber(enemy.maxHp)}`;$('enemyHpBar').style.width=Math.max(0,enemy.hp/enemy.maxHp*100)+'%'}
