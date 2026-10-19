@@ -56,11 +56,10 @@ async function ensureAccountProfile(user) {
   const counterResult = await runTransaction(ref(database, 'accountCounter'), value => (Number.isSafeInteger(value) && value >= 0 ? value : 0) + 1);
   if (!counterResult.committed) throw new Error('Не удалось получить номер аккаунта');
   const accountNumber = counterResult.snapshot.val();
-  const serverOffsetSnapshot = await get(ref(database, '.info/serverTimeOffset'));
   const initialProfile = {
     accountNumber,
     nickname: `user${accountNumber}`,
-    createdAt: Date.now() + (Number(serverOffsetSnapshot.val()) || 0),
+    createdAt: Date.now(),
     nicknameChangedAt: 0
   };
   const profileResult = await runTransaction(userProfileRef, current => current || initialProfile);
@@ -234,8 +233,10 @@ async function saveNickname() {
     }
     if (nickname === profile.nickname) { feedback.textContent = 'Этот ник уже установлен.'; setNicknameEditor(false); return; }
     step = 'проверка времени смены ника';
-    const offsetSnapshot = await get(ref(database, '.info/serverTimeOffset'));
-    const serverNow = Date.now() + (Number(offsetSnapshot.val()) || 0);
+    // nicknameChangedAt is written with serverTimestamp(), so its stored value is
+    // server time. Use the local clock for the UI countdown; the database Rules
+    // remain the authority for the 24-hour limit.
+    const serverNow = Date.now();
     const remaining = 86400000 - (serverNow - (profile.nicknameChangedAt || 0));
     if (remaining > 0) { feedback.textContent = `Ник можно менять через ${Math.ceil(remaining / 3600000)} ч.`; return; }
     step = 'запись ника в Firebase';
