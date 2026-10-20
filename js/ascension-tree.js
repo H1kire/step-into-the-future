@@ -40,7 +40,7 @@
     const selected = classes.find(node => node.id === selectedId);
     const allowed = selected && isAvailable(selected, current);
     choose.disabled = !allowed;
-    choose.textContent = allowed ? `Открыть путь: ${selected.name} · 1 поинт` : path.length >= 2 ? `Активный класс: ${names[current.classId]}` : current.level < 10 ? 'Откроется на 10 уровне' : 'Выбери доступный путь';
+    choose.textContent = allowed ? `Изучить узел: ${selected.name} · 1 поинт` : path.length >= 2 ? `Активный класс: ${names[current.classId]}` : current.level < 10 ? 'Откроется на 10 уровне' : 'Выбери доступный путь';
     if (selected) {
       const requirement = selected.id === 'adventurer' ? 'Требование: 10 уровень и 1 поинт Вознесения.' : 'Требование: сначала открыть Авантюриста, затем достичь 25 уровня и потратить ещё 1 поинт Вознесения.';
       detail.innerHTML = `<b>${selected.name}</b><br>${selected.description}<br>${requirement}`;
