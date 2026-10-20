@@ -7,6 +7,7 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,att
 const playerIcon=L.divIcon({className:'',html:'<div class="marker youmarker">🧙</div>',iconSize:[42,42],iconAnchor:[21,21]});
 const enemyIcon=L.divIcon({className:'',html:'<div class="marker enemymarker">👾</div>',iconSize:[38,38],iconAnchor:[19,19]});
 const merchantIcon=L.divIcon({className:'',html:'<div class="marker merchantmarker">🧔</div>',iconSize:[40,40],iconAnchor:[20,20]});
+const priestIcon=L.divIcon({className:'',html:'<div class="marker priestmarker">🧙‍♂️</div>',iconSize:[42,42],iconAnchor:[21,21]});
 const SAVE_KEY='gorodskie-stranniki-save-v1';
 const DEVELOPER_UID='fszpYBGnslg9qN7eWteUwE8y3s63';
 function readSave(){try{return JSON.parse(localStorage.getItem(SAVE_KEY)||'null')||{}}catch{return{}}}
@@ -20,18 +21,20 @@ let enemyMarker=null, enemy=null, monsters=[],gpsWatch=null, distance=Number.isF
 let state={level:1,xp:0,hp:100,maxHp:100,coins:0,potions:1,attack:12,defense:0,encounters:0,...(savedGame.state||{})};
 state.godMode=false;
 let merchantPos=Array.isArray(savedGame.merchantPos)&&savedGame.merchantPos.length===2&&Number.isFinite(savedGame.merchantPos[0])&&Number.isFinite(savedGame.merchantPos[1])&&Math.abs(savedGame.merchantPos[0])<=90&&Math.abs(savedGame.merchantPos[1])<=180?savedGame.merchantPos:null,merchantMarker=null;
+let priestPos=Array.isArray(savedGame.priestPos)&&savedGame.priestPos.length===2&&Number.isFinite(savedGame.priestPos[0])&&Number.isFinite(savedGame.priestPos[1])&&Math.abs(savedGame.priestPos[0])<=90&&Math.abs(savedGame.priestPos[1])<=180?savedGame.priestPos:null,priestMarker=null;
 state.inventory=Array.isArray(state.inventory)?state.inventory:[];state.equipment=state.equipment&&typeof state.equipment==='object'?state.equipment:{};state.energy=Number.isFinite(state.energy)?state.energy:(Number.isFinite(state.mana)?state.mana:50);state.maxEnergy=Number.isFinite(state.maxEnergy)?state.maxEnergy:(Number.isFinite(state.maxMana)?state.maxMana:50);delete state.mana;delete state.maxMana;
 state.bagBonus=Number.isFinite(state.bagBonus)?state.bagBonus:(state.equipment['Рюкзак']?Number(state.equipment['Рюкзак'].bagBonus)||8:0);
 state.potions=Math.max(0,Math.min(10,Number.isFinite(state.potions)?state.potions:1));
 state.abilityPoints=Number.isFinite(state.abilityPoints)?state.abilityPoints:Math.max(0,state.level-1);state.skillNodes=Array.isArray(state.skillNodes)?state.skillNodes.map(id=>String(id).replace(/^hero-mana-/,'hero-energy-')):[];
 state.ascensionClass=typeof state.ascensionClass==='string'?state.ascensionClass:'';state.ascensionPoints=Number.isFinite(state.ascensionPoints)?state.ascensionPoints:(state.level>=10?1+Math.floor(state.level/25):0);
-function saveGame(){try{const savedState={...state,godMode:false};if(state.godMode){savedState.hp=Math.min(state.hp,state.maxHp*(1+abilityBonus('health')));savedState.energy=Math.min(state.energy,state.maxEnergy*(1+abilityBonus('energy')))}localStorage.setItem(SAVE_KEY,JSON.stringify({state:savedState,distance,pos:lastRealGpsPos,displayPos:pos,realGps:!!lastRealGpsPos,merchantPos,log:Array.from($('log').children).map(p=>({text:p.textContent,kind:p.className})),monsters:monsters.map(({marker,...m})=>m)}))}catch{}}
+function saveGame(){try{const savedState={...state,godMode:false};if(state.godMode){savedState.hp=Math.min(state.hp,state.maxHp*(1+abilityBonus('health')));savedState.energy=Math.min(state.energy,state.maxEnergy*(1+abilityBonus('energy')))}localStorage.setItem(SAVE_KEY,JSON.stringify({state:savedState,distance,pos:lastRealGpsPos,displayPos:pos,realGps:!!lastRealGpsPos,merchantPos,priestPos,log:Array.from($('log').children).map(p=>({text:p.textContent,kind:p.className})),monsters:monsters.map(({marker,...m})=>m)}))}catch{}}
 function scheduleSave(){clearTimeout(saveTimer);saveTimer=setTimeout(saveGame,350)}
 let devMode=false,isDeveloper=false,turn='player',lastAttack=0,combatId=0,activeItemDrag=null,activeInventoryScroll=null;
 function setupPanels(){
  const aside=document.querySelector('aside');
  const playerHud=aside.querySelector(':scope > .card:first-child');playerHud.id='playerHud';playerHud.classList.add('floating-panel');document.body.append(playerHud);
  const merchantPanel=aside.querySelector('#merchantPanel');merchantPanel.style.left=innerWidth<=780?'8px':`${Math.max(12,(innerWidth-430)/2)}px`;merchantPanel.style.top=innerWidth<=780?'8vh':'12vh';merchantPanel.style.transform='none';
+ const priestPanel=$('priestPanel');priestPanel.style.left=innerWidth<=780?'8px':`${Math.max(12,(innerWidth-360)/2)}px`;priestPanel.style.top=innerWidth<=780?'8vh':'14vh';priestPanel.style.transform='none';
  const itemDetailPanel=$('itemDetailPanel');itemDetailPanel.style.left=innerWidth<=780?'8px':`${Math.max(12,(innerWidth-340)/2)}px`;itemDetailPanel.style.top='18vh';itemDetailPanel.style.transform='none';
  const menu=document.createElement('section');menu.id='actionMenu';menu.className='card floating-panel hidden menu-panel';menu.style.left=innerWidth<=780?'8px':`${Math.max(12,innerWidth-320)}px`;menu.style.top=innerWidth<=780?'auto':'72px';if(innerWidth<=780)menu.style.bottom='calc(64px + env(safe-area-inset-bottom,0px))';menu.innerHTML='<div class="panel-title"><h2>Меню</h2><button type="button" class="secondary panel-close" aria-label="Закрыть меню">✕</button></div><div class="hud-tools"><button type="button" class="secondary" data-open="statsPanel">📊 Герой</button><button type="button" class="secondary" data-open="logPanel">📜 Журнал</button><button type="button" class="secondary" data-open="bagPanel">🎒 Снаряжение</button><button type="button" class="secondary" data-open="chatPanel">💬 Чат</button><button type="button" class="secondary" id="ascensionOpen">✨ Вознесение</button><button type="button" class="secondary" data-open="accountPanel">👤 Аккаунт</button><button type="button" class="secondary" id="developerMenuButton" data-open="devPanel" hidden>🛠 Меню разработчика</button></div>';document.body.append(menu);
  const menuButton=document.createElement('button');menuButton.type='button';menuButton.id='menuToggle';menuButton.className='primary menu-toggle';menuButton.setAttribute('aria-expanded','false');menuButton.setAttribute('aria-controls','actionMenu');menuButton.textContent='☰ Меню';document.body.append(menuButton);menuButton.addEventListener('click',()=>{const open=menu.classList.toggle('hidden')===false;menuButton.setAttribute('aria-expanded',String(open));menu.style.zIndex='5000'});
@@ -113,8 +116,9 @@ function ascensionMilestone(level){return level===10||(level>=25&&level%25===0)}
 window.GameAPI={
  getSkillSnapshot(){return{level:state.level,abilityPoints:state.abilityPoints,purchased:[...state.skillNodes]}},
  purchaseSkillNode(node){if(!node||typeof node.id!=='string'||!Number.isInteger(node.cost)||node.cost<1||state.skillNodes.includes(node.id)||state.abilityPoints<node.cost)return false;const hpBefore=effectiveMaxHp(),energyBefore=effectiveMaxEnergy();state.abilityPoints-=node.cost;state.skillNodes.push(node.id);state.hp=Math.min(effectiveMaxHp(),state.hp+effectiveMaxHp()-hpBefore);state.energy=Math.min(effectiveMaxEnergy(),state.energy+effectiveMaxEnergy()-energyBefore);render();return true},
- getAscensionSnapshot(){return{level:state.level,points:state.ascensionPoints,classId:state.ascensionClass}},
+ getAscensionSnapshot(){return{level:state.level,points:state.ascensionPoints,classId:state.ascensionClass,coins:state.coins}},
  chooseAscensionClass(classId){const valid=['adventurer','warrior','archer','mage'];if(!valid.includes(classId)||state.ascensionPoints<1)return false;if(classId==='adventurer'){if(state.ascensionClass||state.level<10)return false}else if(state.ascensionClass!=='adventurer'||state.level<25)return false;state.ascensionPoints--;state.ascensionClass=classId;render();return true},
+ resetAscension(){const cost=10000;if(!state.ascensionClass||state.coins<cost)return false;const refund=state.ascensionClass==='adventurer'?1:2;state.coins-=cost;state.ascensionPoints+=refund;state.ascensionClass='';render();scheduleSave();log(`Священник сбросил ветку Вознесения за ${formatGameNumber(cost)} монет. Возвращено ${refund} поинтов.`,'good');return true},
  getResourceName(){return resourceName()},
  refresh(){render()}
 };
@@ -185,6 +189,7 @@ function render(){
  $('potionBtn').textContent=`🧪 Лечиться (${state.potions})`;$('potionBtn').disabled=state.potions<1||state.hp>=maxHp;
  $('slashBtn').disabled=state.energy<15||!enemy; if(!$('enemyCard').classList.contains('show'))$('enemyCard').classList.remove('show');renderStats();
  if(!$('merchantPanel').classList.contains('hidden'))renderMerchantShop();
+ if(!$('priestPanel').classList.contains('hidden'))renderPriestService();
  scheduleSave();
  window.dispatchEvent(new Event('game:stats-updated'));
 }
@@ -213,7 +218,7 @@ function updatePos(latlng,source='GPS'){
  if(source==='GPS')lastGpsPos=next;
  lastPos=next;pos=next;gpsPositionReady=true;playerMarker.setLatLng(pos);renderChatPeers();if(source==='GPS'&&!gpsInitialCentered){map.setView(pos,Math.max(map.getZoom(),16));gpsInitialCentered=true}
  cleanupDistantMonsters();
- if(gpsAllowed)updateMerchantForPosition();
+ if(gpsAllowed){updateMerchantForPosition();updatePriestForPosition()}
  $('coords').textContent=`${pos[0].toFixed(5)}, ${pos[1].toFixed(5)}`;
  $('mapState').textContent=source==='GPS'?'GPS активен':'Режим разработчика';
  if(source==='GPS')$('gpsHead').textContent='GPS подключён';
@@ -260,6 +265,11 @@ function updateMerchantForPosition(){
  if(map.distance(pos,merchantPos)>=500){placeMerchant(nearbyCoordinates(pos));log('Торговец перебрался ближе к твоему новому району.','good');}
  else if(!merchantMarker){placeMerchant(merchantPos);}
 }
+function placePriest(nextPos){if(priestMarker)map.removeLayer(priestMarker);priestPos=nextPos;priestMarker=L.marker(priestPos,{icon:priestIcon}).addTo(map).bindTooltip('Священник путей');priestMarker.on('click',event=>{L.DomEvent.stopPropagation(event);openPriestPanel()});scheduleSave()}
+function updatePriestForPosition(){if(!priestPos){placePriest(nearbyCoordinates(pos,100,250));log('На карте появился священник. Найди его, чтобы сбросить Вознесение.','good');return}if(map.distance(pos,priestPos)>=1000){placePriest(nearbyCoordinates(pos,100,250));log('Священник появился в новом районе. Найди его на карте.','good')}else if(!priestMarker)placePriest(priestPos)}
+function priestDistance(){return priestPos?map.distance(pos,priestPos):Infinity}
+function renderPriestService(){const distance=priestDistance(),snapshot=window.GameAPI.getAscensionSnapshot(),near=distance<=150;const button=$('priestResetButton');$('priestDistance').textContent=Number.isFinite(distance)?`До священника: ${formatGameNumber(distance)} м · подойди на 150 м`:'Священник пока не найден.';$('priestWallet').textContent=`Твои монеты: ${formatGameNumber(state.coins)} 🪙`;$('priestStatus').textContent=!near?'Подойди ближе, чтобы воспользоваться услугой.':!snapshot.classId?'Сначала выбери класс Вознесения.':state.coins<10000?`Нужно ещё ${formatGameNumber(10000-state.coins)} монет.`:'Священник готов сбросить выбранную ветку.';button.disabled=!near||!snapshot.classId||state.coins<10000}
+function openPriestPanel(){$('priestPanel').classList.remove('hidden');$('priestPanel').style.zIndex='4700';renderPriestService()}
 function openMerchantShop(){
  $('merchantPanel').classList.remove('hidden');$('merchantPanel').style.zIndex='4500';renderMerchantShop();
 }
@@ -353,6 +363,7 @@ $('chatSend').addEventListener('click',()=>{const input=$('chatInput'),text=inpu
 $('chatInput').addEventListener('keydown',e=>{if(e.key==='Enter')$('chatSend').click()});
 $('merchantGoods').addEventListener('click',event=>{const button=event.target.closest('[data-buy]');if(button)buyMerchantOffer(button.dataset.buy)});
 $('merchantSellList').addEventListener('click',event=>{const button=event.target.closest('[data-sell]');if(button)sellMerchantItem(Number(button.dataset.sell))});
+$('priestResetButton').addEventListener('click',()=>{renderPriestService();if($('priestResetButton').disabled)return;if(!window.confirm('Заплатить священнику 10 000 монет, сбросить ветку Вознесения и вернуть потраченные поинты?'))return;if(window.GameAPI.resetAscension())renderPriestService()});
 function startItemDrag(event,slot,item,kind){if(event.button!==undefined&&event.button!==0)return;event.preventDefault();activeItemDrag={pointerId:event.pointerId,slot,item,kind,startX:event.clientX,startY:event.clientY,moved:false,ghost:null,scrollPanel:$('bagPanel'),pointerY:event.clientY,scrollRaf:0};slot.classList.add('dragging');if(kind==='inventory')slot.dataset.dragIndex=slot.dataset.item;else slot.dataset.dragEquip=slot.dataset.equip;try{slot.setPointerCapture(event.pointerId)}catch{}}
 $('inventorySlots').addEventListener('pointerdown',e=>{if(e.button!==undefined&&e.button!==0)return;const slot=e.target.closest('[data-item]');const item=slot?state.inventory[Number(slot.dataset.item)]:null;if(item){startItemDrag(e,slot,item,'inventory');return}const panel=$('bagPanel');if(!panel)return;e.preventDefault();activeInventoryScroll={pointerId:e.pointerId,panel,lastY:e.clientY,startY:e.clientY,moved:false};try{(slot||$('inventorySlots')).setPointerCapture(e.pointerId)}catch{}});
 $('equipSlots').addEventListener('pointerdown',e=>{const slot=e.target.closest('[data-equip]');if(!slot)return;const item=state.equipment[slot.dataset.equip];if(item)startItemDrag(e,slot,item,'equipment')});
@@ -384,7 +395,7 @@ document.addEventListener('keydown',event=>{if(event.key!=='Enter'&&event.key!==
 function gpsErrorText(error){if(error.code===1)return'Доступ к геопозиции запрещён. Разреши его в настройках сайта браузера и снова нажми кнопку входа.';if(error.code===2)return'Телефон временно не получил координаты. Продолжаю искать GPS-сигнал.';return'GPS пока не ответил. Продолжаю ждать сигнал и повторять определение.'}
 function lockGameForGps(message){gpsAllowed=false;gpsPositionReady=false;gpsFixReady=false;lastGpsPos=null;lastGpsAt=0;lastGpsAccuracy=0;gpsCandidate=null;gpsCandidateCount=0;if(gpsWatch!==null)navigator.geolocation?.clearWatch(gpsWatch);gpsWatch=null;document.body.classList.add('site-locked');$('gpsGate').classList.remove('hidden');$('gpsGateStatus').textContent=message;$('gpsGateBtn').disabled=false;$('gpsGateBtn').textContent='🔄 Проверить GPS и войти';$('gpsHead').textContent='GPS не подключён'}
 function handleGpsError(error,retryWatch=false){const message=gpsErrorText(error);if(error.code===1){lockGameForGps(message);return}if(gpsAllowed){$('gpsHead').textContent='Ищем GPS-сигнал…';return}document.body.classList.add('site-locked');$('gpsGate').classList.remove('hidden');$('gpsHead').textContent='Ожидание GPS';$('gpsGateStatus').textContent=message;$('gpsGateBtn').disabled=false;$('gpsGateBtn').textContent='🔄 Повторить проверку GPS';if(retryWatch)startGpsWatch()}
-function unlockGame(){if(!gpsPositionReady)return;const firstUnlock=!gpsAllowed;gpsAllowed=true;document.body.classList.remove('site-locked');$('gpsGate').classList.add('hidden');$('gpsGateStatus').textContent='';requestAnimationFrame(()=>map.invalidateSize());if(firstUnlock){if(monsters.length===0)spawnEnemy(false);updateMerchantForPosition();syncPeer();syncOnline()}}
+function unlockGame(){if(!gpsPositionReady)return;const firstUnlock=!gpsAllowed;gpsAllowed=true;document.body.classList.remove('site-locked');$('gpsGate').classList.add('hidden');$('gpsGateStatus').textContent='';requestAnimationFrame(()=>map.invalidateSize());if(firstUnlock){if(monsters.length===0)spawnEnemy(false);updateMerchantForPosition();updatePriestForPosition();syncPeer();syncOnline()}}
 const gpsOptions={enableHighAccuracy:true,maximumAge:0,timeout:15000};
 function acceptGpsFix(position){const valid=updatePos({lat:position.coords.latitude,lng:position.coords.longitude,accuracy:position.coords.accuracy,timestamp:position.timestamp},'GPS');if(valid&&gpsPositionReady){unlockGame();map.setView(pos,Math.max(map.getZoom(),17));map.invalidateSize();return true}if(!gpsPositionReady){$('gpsHead').textContent='Проверяем GPS';if(!$('gpsGateStatus').textContent)$('gpsGateStatus').textContent='Жду свежий GPS-фикс с точностью до 250 м…';$('gpsGateBtn').disabled=false;$('gpsGateBtn').textContent='🔄 Повторить поиск GPS'}return false}
 function startGpsWatch(){if(gpsWatch!==null)navigator.geolocation.clearWatch(gpsWatch);gpsWatch=navigator.geolocation.watchPosition(acceptGpsFix,error=>handleGpsError(error),gpsOptions)}
@@ -410,6 +421,7 @@ restoreMonsters();
 cleanupDistantMonsters();
 if(monsters.length===0)spawnEnemy(false);
 if(!merchantPos||map.distance(pos,merchantPos)>=500){placeMerchant(nearbyCoordinates(pos));log('На карте появился дружественный торговец. Найди его на карте.','good')}else placeMerchant(merchantPos);
+if(!priestPos){placePriest(nearbyCoordinates(pos,100,250));log('На карте появился священник. Найди его, чтобы сбросить Вознесение.','good')}else placePriest(priestPos);
 render();
 if(!navigator.geolocation){$('gpsGateStatus').textContent='Этот браузер не поддерживает геолокацию.'}else if(navigator.permissions?.query){navigator.permissions.query({name:'geolocation'}).then(permission=>{permission.onchange=()=>{if(permission.state!=='granted'&&gpsAllowed)lockGameForGps('Разрешение на геопозицию отключено. Разреши GPS и войди снова.')};if(permission.state==='granted')requestGpsAccess(true,true);else if(permission.state==='denied')$('gpsGateStatus').textContent='Доступ уже запрещён. Разреши геопозицию в настройках сайта браузера, затем нажми кнопку входа.'}).catch(()=>{$('gpsGateStatus').textContent='Нажми кнопку и разреши браузеру доступ к геопозиции.'})}else $('gpsGateStatus').textContent='Нажми кнопку, чтобы запросить доступ к геопозиции.';
 window.addEventListener('pagehide',saveGame);document.addEventListener('visibilitychange',()=>{if(document.hidden){saveGame();return}if(navigator.permissions?.query)navigator.permissions.query({name:'geolocation'}).then(permission=>{if(permission.state!=='granted'&&gpsAllowed)lockGameForGps('GPS отключён. Разреши геопозицию, чтобы вернуться в игру.');else if(permission.state==='granted'&&!gpsAllowed)requestGpsAccess(true,true)}).catch(()=>{})});
