@@ -55,7 +55,7 @@ function setupPanels(){
   const panel=e.target.closest('.floating-panel:not(#playerHud)');if(!panel)return;
   const now=Date.now(),isSecondTap=lastPanelTap&&lastPanelTap.panel===panel&&now-lastPanelTap.at<450&&Math.hypot(e.clientX-lastPanelTap.x,e.clientY-lastPanelTap.y)<32;
   if(!isSecondTap){lastPanelTap={panel,at:now,x:e.clientX,y:e.clientY};return}
-  clearTimeout(panelTapTimer);lastPanelTap=null;touchPanelDrag={panel,pointerId:e.pointerId,offsetX:e.clientX-panel.getBoundingClientRect().left,offsetY:e.clientY-panel.getBoundingClientRect().top,moved:false};panel.classList.add('touch-drag-armed');
+  clearTimeout(panelTapTimer);lastPanelTap=null;const rect=panel.getBoundingClientRect();panel.style.transform='none';panel.style.left=`${rect.left}px`;panel.style.top=`${rect.top}px`;touchPanelDrag={panel,pointerId:e.pointerId,offsetX:e.clientX-rect.left,offsetY:e.clientY-rect.top,moved:false};panel.classList.add('touch-drag-armed');
   suppressPanelClick=true;e.preventDefault();e.stopPropagation();
   try{panel.setPointerCapture(e.pointerId)}catch{}
  },true);
