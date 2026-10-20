@@ -83,6 +83,7 @@
     <div class="ability-detail" id="abilityDetail">Выбери доступный узел на графе.</div>
     <button type="button" class="primary full" id="abilityBuy" disabled>Выбери узел</button>`;
   document.body.append(panel);
+  window.registerFloatingPanel?.(panel);
 
   let selectedId = null;
   const pointsReadout = panel.querySelector('#abilityPointsReadout');
@@ -186,25 +187,6 @@
     selectNode(node.id);
   });
   window.addEventListener('game:stats-updated', () => { updateSelected(); });
-
-  const titleBar = panel.querySelector('.ability-tree-title');
-  let drag = null;
-  titleBar.addEventListener('pointerdown', event => {
-    if (event.target.closest('button')) return;
-    const rect = panel.getBoundingClientRect();
-    panel.style.transform = 'none';
-    panel.style.left = `${rect.left}px`;
-    panel.style.top = `${rect.top}px`;
-    drag = { x: event.clientX - rect.left, y: event.clientY - rect.top };
-    titleBar.setPointerCapture(event.pointerId);
-  });
-  titleBar.addEventListener('pointermove', event => {
-    if (!drag) return;
-    panel.style.left = `${Math.max(0, Math.min(innerWidth - panel.offsetWidth, event.clientX - drag.x))}px`;
-    panel.style.top = `${Math.max(8, Math.min(innerHeight - 70, event.clientY - drag.y))}px`;
-  });
-  titleBar.addEventListener('pointerup', () => { drag = null; });
-  titleBar.addEventListener('pointercancel', () => { drag = null; });
 
   renderGraph();
   window.GameAPI.refresh();
