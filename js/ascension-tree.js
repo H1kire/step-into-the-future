@@ -20,18 +20,19 @@
   const format = n => window.formatGameNumber ? window.formatGameNumber(n) : String(n);
   function snapshot() { return window.GameAPI.getAscensionSnapshot(); }
   function isAvailable(node, current) {
-    if (current.classId) return false;
-    if (node.id === 'adventurer') return current.level >= 10 && current.points > 0;
-    return current.classId === 'adventurer' && current.level >= 25 && current.points > 0;
+    const path = current.selectedNodes || (current.classId ? (current.classId === 'adventurer' ? ['adventurer'] : ['adventurer', current.classId]) : []);
+    if (node.id === 'adventurer') return path.length === 0 && current.level >= 10 && current.points > 0;
+    return path.length === 1 && path[0] === 'adventurer' && current.level >= 25 && current.points > 0;
   }
   function render() {
     const current = snapshot();
     panel.querySelector('#ascensionPoints').textContent = `Свободно: ${format(current.points)} поинтов вознесения`;
     const names = { adventurer: 'Авантюрист', warrior: 'Воин', archer: 'Стрелок', mage: 'Маг' };
-    panel.querySelector('#ascensionClassStatus').textContent = `Класс: ${names[current.classId] || 'не выбран'}`;
+    const path = current.selectedNodes || (current.classId ? (current.classId === 'adventurer' ? ['adventurer'] : ['adventurer', current.classId]) : []);
+    panel.querySelector('#ascensionClassStatus').textContent = `Путь: ${path.map(id => names[id]).join(' → ') || 'не выбран'}`;
     const edges = `<path class="ascension-link" d="M440 150 C440 220 150 220 150 265"/><path class="ascension-link" d="M440 150 L440 265"/><path class="ascension-link" d="M440 150 C440 220 730 220 730 265"/>`;
     const nodesSvg = classes.map(node => {
-      const available = isAvailable(node, current), owned = current.classId === node.id;
+      const available = isAvailable(node, current), owned = path.includes(node.id);
       const state = owned ? 'purchased' : available ? 'available' : 'locked';
       return `<g class="ascension-node ${state} ${selectedId === node.id ? 'selected' : ''}" data-class-id="${node.id}" tabindex="0" role="button" aria-label="${node.name}"><circle cx="${node.x}" cy="${node.y}" r="62"/><text x="${node.x}" y="${node.y + 5}" text-anchor="middle">${node.name}</text></g>`;
     }).join('');
@@ -39,12 +40,12 @@
     const selected = classes.find(node => node.id === selectedId);
     const allowed = selected && isAvailable(selected, current);
     choose.disabled = !allowed;
-    choose.textContent = allowed ? `Выбрать класс: ${selected.name} · 1 поинт` : current.classId ? `Выбран класс: ${names[current.classId]}` : current.level < 10 ? 'Откроется на 10 уровне' : 'Выбери доступный путь';
+    choose.textContent = allowed ? `Открыть путь: ${selected.name} · 1 поинт` : path.length >= 2 ? `Активный класс: ${names[current.classId]}` : current.level < 10 ? 'Откроется на 10 уровне' : 'Выбери доступный путь';
     if (selected) {
-      const requirement = selected.id === 'adventurer' ? 'Требование: 10 уровень.' : 'Требование: сначала выбрать Авантюриста, затем достичь 25 уровня.';
+      const requirement = selected.id === 'adventurer' ? 'Требование: 10 уровень и 1 поинт Вознесения.' : 'Требование: сначала открыть Авантюриста, затем достичь 25 уровня и потратить ещё 1 поинт Вознесения.';
       detail.innerHTML = `<b>${selected.name}</b><br>${selected.description}<br>${requirement}`;
     } else {
-      detail.textContent = current.classId ? 'Класс уже выбран. Дополнительные ветви вознесения появятся позже.' : 'На 10 уровне откроется Авантюрист. После выбора на 25 уровне откроются ветви Воина, Стрелка и Мага.';
+      detail.textContent = path.length >= 2 ? `Ветка ${names[current.classId]} открыта. Дальнейшие узлы этой ветки появятся в следующих обновлениях.` : path.length === 1 ? 'Авантюрист открыт. На 25 уровне можно потратить следующий поинт и выбрать Воина, Стрелка или Мага.' : 'На 10 уровне откроется Авантюрист. После его выбора на 25 уровне откроются ветви Воина, Стрелка и Мага.';
     }
   }
   function open() {
