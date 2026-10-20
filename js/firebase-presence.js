@@ -1,12 +1,12 @@
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js';
 import { initializeAppCheck, ReCaptchaV3Provider } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-app-check.js';
 import { getAuth, signInAnonymously, GoogleAuthProvider, linkWithPopup, signInWithPopup, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js';
-import { getDatabase, ref, onValue, onChildAdded, set, onDisconnect, get, runTransaction, update, serverTimestamp, push, query, orderByChild, limitToLast } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-database.js';
+import { getDatabase, ref, onValue, onChildAdded, set, onDisconnect, get, runTransaction, update, serverTimestamp, push, query, orderByChild, limitToLast, endAt, remove } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-database.js';
 
 import { firebaseConfig, appCheckSiteKey, developerUid } from './firebase-config.js';
 
 const onlineStatus = document.getElementById('onlineStatus');
-let lastPosition = null, lastSentAt = 0, currentPlayerRef = null, unsubscribePlayers = null, unsubscribeProfile = null, unsubscribeChat = null, chatName = 'Странник', lastChatSentAt = 0;
+let lastPosition = null, lastSentAt = 0, currentPlayerRef = null, unsubscribePlayers = null, unsubscribeProfile = null, unsubscribeChat = null, chatCleanupTimer = null, cleanupRunning = false, chatName = 'Странник', lastChatSentAt = 0;
 const app = initializeApp(firebaseConfig);
 if (appCheckSiteKey) initializeAppCheck(app, { provider: new ReCaptchaV3Provider(appCheckSiteKey), isTokenAutoRefreshEnabled: true });
 const auth = getAuth(app);
@@ -80,7 +80,7 @@ function watchProfile(user) {
 
 function watchChat(user) {
   if (unsubscribeChat) unsubscribeChat();
-  const recentChat = query(ref(database, 'chatMessages'), orderByChild('createdAt'), limitToLast(50));
+  const recentChat = query(ref(database, 'chatMessages'), orderByChild('createdAt'), limitToLast(100));
   unsubscribeChat = onChildAdded(recentChat, snapshot => {
     const message = snapshot.val();
     if (!message || !Number.isFinite(message.createdAt)) return;
@@ -89,7 +89,31 @@ function watchChat(user) {
     window.dispatchEvent(new CustomEvent('firebase:chat-status', { detail: { text: 'Чат недоступен: проверь Rules Realtime Database' } }));
     console.error('Firebase chat read failed', error);
   });
-  window.dispatchEvent(new CustomEvent('firebase:chat-status', { detail: { text: `Чат подключён · сообщения видны в радиусе 150 м` } }));
+  window.dispatchEvent(new CustomEvent('firebase:chat-status', { detail: { text: 'Слушаю новые сообщения чата' } }));
+}
+
+async function cleanupExpiredChat() {
+  if (cleanupRunning || !auth.currentUser) return;
+  cleanupRunning = true;
+  const cutoff = Date.now() - 10 * 60 * 1000;
+  try {
+    const expired = await get(query(ref(database, 'chatMessages'), orderByChild('createdAt'), endAt(cutoff), limitToFirst(100)));
+    const deletions = [];
+    expired.forEach(child => {
+      const message = child.val();
+      if (Number.isFinite(message?.createdAt) && message.createdAt <= cutoff) {
+        deletions.push(remove(ref(database, `chatMessages/${child.key}`)));
+      }
+    });
+    await Promise.all(deletions);
+    if (deletions.length) window.dispatchEvent(new CustomEvent('firebase:chat-status', { detail: { text: `Автоочистка удалила сообщений: ${deletions.length}` } }));
+    else window.dispatchEvent(new CustomEvent('firebase:chat-status', { detail: { text: '' } }));
+  } catch (error) {
+    window.dispatchEvent(new CustomEvent('firebase:chat-status', { detail: { text: 'Автоочистка: опубликуй новые Firebase Rules' } }));
+    console.warn('Firebase chat cleanup failed; publish the updated Realtime Database rules', error);
+  } finally {
+    cleanupRunning = false;
+  }
 }
 
 onAuthStateChanged(auth, async user => {
@@ -115,6 +139,9 @@ onAuthStateChanged(auth, async user => {
   }
   currentPlayerRef = ref(database, `players/${user.uid}`);
   watchChat(user);
+  if (chatCleanupTimer) clearInterval(chatCleanupTimer);
+  cleanupExpiredChat();
+  chatCleanupTimer = setInterval(cleanupExpiredChat, 60 * 1000);
   if (unsubscribePlayers) unsubscribePlayers();
   unsubscribePlayers = onValue(ref(database, 'players'), snapshot => {
     window.dispatchEvent(new CustomEvent('firebase:players', { detail: snapshot.val() || {} }));
@@ -123,7 +150,9 @@ onAuthStateChanged(auth, async user => {
     console.error('Firebase players read failed', error);
   });
   onValue(ref(database, '.info/connected'), snapshot => {
-    if (snapshot.val() !== true) { onlineStatus.textContent = 'Онлайн: переподключение…'; return; }
+    const connected = snapshot.val() === true;
+    window.dispatchEvent(new CustomEvent('firebase:chat-status', { detail: { connected } }));
+    if (!connected) { onlineStatus.textContent = 'Онлайн: переподключение…'; return; }
     onDisconnect(currentPlayerRef).remove().then(() => {
       onlineStatus.textContent = 'Онлайн: подключено';
       publishPosition();
