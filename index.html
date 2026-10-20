@@ -44,7 +44,23 @@
 <section id="gpsGate" class="gps-gate" role="dialog" aria-modal="true" aria-labelledby="gpsGateTitle">
  <div class="gps-gate-card"><div class="gps-gate-icon">📍</div><h1 id="gpsGateTitle">Для игры нужен GPS</h1><p>Разреши браузеру доступ к геопозиции и дождись точного определения координат. До этого игровой экран останется закрыт.</p><button type="button" class="primary" id="gpsGateBtn">Разрешить GPS и войти в игру</button><p class="gps-gate-status" id="gpsGateStatus" aria-live="polite"></p></div>
 </section>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+// Report startup failures on the gate instead of leaving a dead-looking button.
+window.addEventListener('error', event => {
+  const status = document.getElementById('gpsGateStatus');
+  if (!status || document.getElementById('gpsGate')?.classList.contains('hidden')) return;
+  const source = event.filename ? ` (${event.filename.split('/').pop()}:${event.lineno || 0})` : '';
+  status.textContent = `Ошибка запуска игры${source}: ${event.message || 'не удалось загрузить скрипт'}. Обнови страницу; если повторится — пришли этот текст.`;
+}, true);
+document.getElementById('gpsGateBtn')?.addEventListener('click', () => {
+  window.setTimeout(() => {
+    if (window.__gameGpsHandlerReady || window.__gameGpsRequestStarted) return;
+    const status = document.getElementById('gpsGateStatus');
+    if (status) status.textContent = 'Игра ещё не загрузила карту и обработчик GPS. Проверь интернет и обнови страницу.';
+  }, 100);
+});
+</script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js'"></script>
 <script src="./js/game-images.js"></script>
 <script src="./js/number-format.js"></script>
 <script src="./js/game.js"></script>

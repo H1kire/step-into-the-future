@@ -1,5 +1,7 @@
 (() => {
 const $ = id => document.getElementById(id);
+// Keep the GPS entry flow usable on browsers that do not implement randomUUID.
+const makePlayerId = () => globalThis.crypto?.randomUUID?.() || `player-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 const map = L.map('map').setView([50.4501,30.5234],15);
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'&copy; OpenStreetMap contributors'}).addTo(map);
 const playerIcon=L.divIcon({className:'',html:'<div class="marker youmarker">🧙</div>',iconSize:[42,42],iconAnchor:[21,21]});
@@ -47,7 +49,7 @@ window.addEventListener('firebase:auth',event=>{const {uid,profile,email,created
 function xpToNextLevel(level=state.level){return Math.ceil(100*Math.pow(1.65,level))}
 function resourceName(){return state.ascensionClass==='mage'?'Мана':'Энергия'}
 function renderStats(){const weaponBonus=(state.equipment['Оружие']?.attackBonus||0)+(state.equipment['2 рука']?.attackBonus||0),resource=resourceName();const entries=[['Уровень',state.level],['Ability Points',state.abilityPoints],['Поинты вознесения',state.ascensionPoints],['Класс',({adventurer:'Авантюрист',warrior:'Воин',archer:'Стрелок',mage:'Маг'})[state.ascensionClass]||'Не выбран'],['Опыт',`${formatGameNumber(state.xp)} / ${formatGameNumber(xpToNextLevel())}`],['Опыт до следующего уровня',formatGameNumber(xpToNextLevel())],['Здоровье',`${formatGameNumber(state.hp)} / ${formatGameNumber(effectiveMaxHp())}`],['Максимум здоровья',formatGameNumber(effectiveMaxHp())],['Базовая атака',formatGameNumber(state.attack)],['Бонус оружия',formatGameNumber(weaponBonus)],['Итоговый урон',formatGameNumber(totalAttack())],['Защита',formatGameNumber(effectiveDefense())],[resource,`${formatGameNumber(state.energy)} / ${formatGameNumber(effectiveMaxEnergy())}`],[`Максимум ${resource.toLowerCase()}`,formatGameNumber(effectiveMaxEnergy())],['Монеты',formatGameNumber(state.coins)],['Победы',state.encounters],['Предметы',state.inventory.length]];$('heroStats').innerHTML=entries.map(([k,v])=>`<div class="status"><b>${k}:</b> ${v}</div>`).join('')}
-const playerId=crypto.randomUUID?crypto.randomUUID():String(Math.random());let peers={},peerMarkers={},seenChatIds=new Set(),channel='BroadcastChannel' in window?new BroadcastChannel('stranniki-local'):null;
+const playerId=makePlayerId();let peers={},peerMarkers={},seenChatIds=new Set(),channel='BroadcastChannel' in window?new BroadcastChannel('stranniki-local'):null;
 const slots=['Оружие','2 рука','Обувь','Ноги','Торс','Шлем','Рюкзак'];const rarities=[['Обычное','common'],['Необычное','uncommon'],['Редкое','rare'],['Эпическое','epic'],['Легендарное','legendary']];
 const weaponDamage={common:2,uncommon:4,rare:6,epic:9,legendary:13};
 const merchantCatalog=[
@@ -333,13 +335,17 @@ const gpsOptions={enableHighAccuracy:true,maximumAge:0,timeout:15000};
 function acceptGpsFix(position){const valid=updatePos({lat:position.coords.latitude,lng:position.coords.longitude,accuracy:position.coords.accuracy,timestamp:position.timestamp},'GPS');if(valid&&gpsPositionReady){unlockGame();map.setView(pos,Math.max(map.getZoom(),17));map.invalidateSize();return true}if(!gpsPositionReady){$('gpsHead').textContent='Проверяем GPS';if(!$('gpsGateStatus').textContent)$('gpsGateStatus').textContent='Жду свежий GPS-фикс с точностью до 250 м…';$('gpsGateBtn').disabled=false;$('gpsGateBtn').textContent='🔄 Повторить поиск GPS'}return false}
 function startGpsWatch(){if(gpsWatch!==null)navigator.geolocation.clearWatch(gpsWatch);gpsWatch=navigator.geolocation.watchPosition(acceptGpsFix,error=>handleGpsError(error),gpsOptions)}
 function requestGpsAccess(fromGate=false,permissionAlreadyGranted=false){
+ window.__gameGpsRequestStarted=true;
  const gateStatus=$('gpsGateStatus');if(!navigator.geolocation){lockGameForGps('Этот браузер не поддерживает геолокацию. Открой игру в браузере с поддержкой GPS.');return}
  if(!window.isSecureContext){lockGameForGps('Для GPS открой сайт через HTTPS.');return}
  document.body.classList.add('site-locked');$('gpsGate').classList.remove('hidden');$('gpsGateBtn').disabled=false;$('gpsGateBtn').textContent='⏳ Ищем GPS…';gateStatus.textContent=permissionAlreadyGranted?'Доступ уже разрешён. Получаю координаты; кнопку можно нажать повторно.':'Разреши доступ в запросе браузера. Если поиск затянулся, нажми кнопку ещё раз.';$('gpsHead').textContent='Запрос GPS…';
- startGpsWatch();
- navigator.geolocation.getCurrentPosition(position=>{acceptGpsFix(position);if(!gpsAllowed)$('gpsGateBtn').textContent='🔄 Повторить поиск GPS';startGpsWatch()},error=>handleGpsError(error),gpsOptions);
+ try{
+  startGpsWatch();
+  navigator.geolocation.getCurrentPosition(position=>{acceptGpsFix(position);if(!gpsAllowed)$('gpsGateBtn').textContent='🔄 Повторить поиск GPS';startGpsWatch()},error=>handleGpsError(error),gpsOptions);
+ }catch(error){lockGameForGps(`Браузер не смог запустить GPS: ${error?.message||error}. Проверь разрешения геопозиции и нажми кнопку ещё раз.`)}
 }
 $('gpsGateBtn').addEventListener('click',()=>requestGpsAccess(true));
+window.__gameGpsHandlerReady=true;
 setInterval(()=>{for(const [id,p] of Object.entries(peers))if(Date.now()-p.at>10000){delete peers[id];if(peerMarkers[id])map.removeLayer(peerMarkers[id]);delete peerMarkers[id]}syncPeer()},5000);
 setInterval(()=>{const maxHp=effectiveMaxHp(),maxEnergy=effectiveMaxEnergy();if(state.hp<maxHp&&!enemy)state.hp=Math.min(maxHp,state.hp+maxHp*.0025);if(state.energy<maxEnergy&&!enemy)state.energy=Math.min(maxEnergy,state.energy+maxEnergy*.0075);render()},1000);
 setInterval(()=>{if(gpsAllowed&&!document.hidden&&monsters.length<25)spawnEnemy(false)},10000);
