@@ -287,6 +287,7 @@ $('slashBtn').addEventListener('click',()=>{
  $('attackBtn').disabled=true;$('slashBtn').disabled=true;$('combatStatus').textContent='Рассечение выполнено. Ход противника через 1 секунду…';
  setTimeout(()=>{if(combatId!==activeCombat||enemy!==target)return;const hit=state.godMode?0:Math.max(1,target.atk+Math.floor(Math.random()*5)-2-effectiveDefense());state.hp=Math.max(0,state.hp-hit);log(state.godMode?`${target.name} атакует, но Режим Бога блокирует урон.`:`${target.name} отвечает и наносит ${formatGameNumber(hit)} урона с учётом защиты.`,'bad');if(state.hp<=0){handlePlayerDeath();render();return}turn='player';$('attackBtn').disabled=false;$('slashBtn').disabled=state.energy<15;$('combatStatus').textContent='Твой ход.';render()},1000)
 });
+setupPanels();
 $('centerBtn').addEventListener('click',()=>map.setView(pos,17));
 function developerActionAllowed(){return isDeveloper&&window.firebasePlayerUid===DEVELOPER_UID}
 function changeDeveloperLevel(delta){if(!developerActionAllowed()||!Number.isInteger(delta)||!delta)return;const target=Math.max(1,Math.min(100000,state.level+delta));while(state.level<target){state.level++;state.abilityPoints++;state.maxHp+=15;state.attack+=3;state.potions=Math.min(10,state.potions+1);if(ascensionMilestone(state.level))state.ascensionPoints++}while(state.level>target){if(ascensionMilestone(state.level))state.ascensionPoints=Math.max(0,state.ascensionPoints-1);state.level--;state.abilityPoints=Math.max(0,state.abilityPoints-1);state.maxHp=Math.max(100,state.maxHp-15);state.attack=Math.max(12,state.attack-3)}state.xp=0;state.hp=Math.min(state.hp,effectiveMaxHp());state.energy=Math.min(state.energy,effectiveMaxEnergy());render();scheduleSave();log(`Уровень разработчиком изменён: теперь ${state.level}.`,'good')}
@@ -343,7 +344,7 @@ setInterval(()=>{for(const [id,p] of Object.entries(peers))if(Date.now()-p.at>10
 setInterval(()=>{const maxHp=effectiveMaxHp(),maxEnergy=effectiveMaxEnergy();if(state.hp<maxHp&&!enemy)state.hp=Math.min(maxHp,state.hp+maxHp*.0025);if(state.energy<maxEnergy&&!enemy)state.energy=Math.min(maxEnergy,state.energy+maxEnergy*.0075);render()},1000);
 setInterval(()=>{if(gpsAllowed&&!document.hidden&&monsters.length<25)spawnEnemy(false)},10000);
 window.addEventListener('resize',()=>requestAnimationFrame(()=>map.invalidateSize()));window.addEventListener('orientationchange',()=>setTimeout(()=>map.invalidateSize(),250));
-setupPanels();renderBag();
+renderBag();
 if(Array.isArray(savedGame.log)){const logBox=$('log');logBox.replaceChildren();savedGame.log.slice(0,18).reverse().forEach(entry=>{const p=document.createElement('p');p.textContent=String(entry.text||'');if(['good','bad'].includes(entry.kind))p.className=entry.kind;logBox.append(p)})}
 restoreMonsters();
 cleanupDistantMonsters();
