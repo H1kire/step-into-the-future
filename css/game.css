@@ -49,6 +49,7 @@ header{position:fixed;inset:0 0 auto;height:calc(58px + env(safe-area-inset-top,
 .tree-link{fill:none;stroke-width:2;opacity:.3}.tree-link-done{opacity:.85;stroke-width:3}
 .tree-node{cursor:pointer;outline:none}.tree-node circle{fill:#202a36;stroke-width:2}.tree-node text{fill:#b9c5d2;font-size:9px;pointer-events:none}.tree-node.locked{opacity:.35;cursor:not-allowed}.tree-node.available circle{fill:#294b3a;filter:drop-shadow(0 0 5px #73e0a066)}.tree-node.affordable-later circle{fill:#3b3322}.tree-node.purchased circle{fill:#2f6c50}.tree-node.purchased text{fill:white}.tree-node.selected circle{stroke:#fff;stroke-width:4}.tree-node:focus circle{stroke:#fff;stroke-width:4}
 .gold-lane-title{fill:#e2e8f0;font-size:11px;font-weight:700}
+.gold-tree-node.gold-root circle{fill:#725a21;stroke:#ffe18b;stroke-width:4;filter:drop-shadow(0 0 12px #ffd166aa)}.gold-tree-node.gold-root text{fill:#fff1bc;font-size:13px;font-weight:900}.gold-tree-node.gold-root.locked{opacity:.75}
 .ability-detail{margin:10px 0;color:var(--muted);font-size:13px;line-height:1.5;min-height:42px}.ability-detail b{color:var(--text)}
 .enemy .panel-title{gap:5px}.enemy .panel-title h2{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.enemy .combat-close{flex:0 0 auto;min-width:26px;min-height:26px;padding:3px 6px;line-height:1}
 .merchantmarker{width:40px;height:40px;border-radius:50%;background:#58451f;border:2px solid #ffd166;box-shadow:0 0 0 5px #ffd16633;font-size:23px}
