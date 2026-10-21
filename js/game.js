@@ -59,6 +59,7 @@ function setupPanels(){
  let lastPanelTap=null,touchPanelDrag=null,suppressPanelClick=false,suppressPanelClickUntil=0,panelTapTimer=null;
  document.addEventListener('pointerdown',e=>{
   if(e.pointerType!=='touch')return;
+  if(e.target.closest('.ability-graph-scroll,#treeZoomToolbar')){lastPanelTap=null;clearTimeout(panelTapTimer);return}
   const panel=e.target.closest('.floating-panel:not(#playerHud)');if(!panel)return;
   const now=Date.now(),isSecondTap=lastPanelTap&&lastPanelTap.panel===panel&&now-lastPanelTap.at<450&&Math.hypot(e.clientX-lastPanelTap.x,e.clientY-lastPanelTap.y)<32;
   if(!isSecondTap){lastPanelTap={panel,at:now,x:e.clientX,y:e.clientY};return}
