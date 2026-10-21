@@ -62,7 +62,7 @@
   goldLanes.forEach((lane, laneIndex) => {
     for (let depth=1;depth<=50;depth++) {
       const magnitude = 1 + (depth-1)*.045;
-      const base = lane.kind==='stat' ? .0012 : lane.key==='gold' ? .0016 : .001;
+      const base = lane.kind==='stat' ? .0012 : lane.key==='gold' ? .00794935521688 : .001;
       const effect = base*magnitude;
       const maxRank = 5 + ((depth-1)%5)*5;
       const id=`gold-${lane.id}-${String(depth).padStart(2,'0')}`;
