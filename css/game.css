@@ -46,6 +46,7 @@ header{position:fixed;inset:0 0 auto;height:calc(58px + env(safe-area-inset-top,
 .ability-graph-scroll{height:min(50vh,520px);overflow:auto;border:1px solid #334155;border-radius:10px;background:#101720;touch-action:pan-x pan-y}
 .ability-graph-scroll.gold-tree-touch{position:relative;overflow:hidden;touch-action:none;overscroll-behavior:contain}
 .ability-graph-scroll.gold-tree-touch #abilityGraph{position:absolute;left:0;top:0;transform-origin:0 0;max-width:none;min-height:0;will-change:transform}
+.ability-graph-scroll.gold-tree-gesture #abilityGraph .gold-tree-node circle,.ability-graph-scroll.gold-tree-gesture #abilityGraph .gold-tree-link{filter:none!important;transition:none!important}
 #abilityGraph{display:block;width:1240px;max-width:none;height:auto;min-height:100%;overflow:visible}
 .tree-branch-title{font-size:19px;font-weight:800}.tree-branch-root{fill:#aebdce;font-size:11px;font-weight:700;letter-spacing:1px}.tree-lane-title{fill:#e2e8f0;font-size:12px;font-weight:700}
 .tree-link{fill:none;stroke-width:2;opacity:.3}.tree-link-done{opacity:.85;stroke-width:3}
