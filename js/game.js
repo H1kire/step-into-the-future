@@ -27,7 +27,7 @@ state.inventory=Array.isArray(state.inventory)?state.inventory:[];state.equipmen
 for(const item of [...state.inventory,...Object.values(state.equipment)])if(item&&typeof item==='object'){if(!Number.isFinite(item.level))item.level=1;if(!Number.isFinite(item.requiredLevel))item.requiredLevel=1}
 state.bagBonus=Number.isFinite(state.bagBonus)?state.bagBonus:(state.equipment['Рюкзак']?Number(state.equipment['Рюкзак'].bagBonus)||8:0);
 state.potions=Math.max(0,Math.min(10,Number.isFinite(state.potions)?state.potions:1));
-state.abilityPoints=Number.isFinite(state.abilityPoints)?state.abilityPoints:Math.max(0,state.level-1);state.skillNodes=Array.isArray(state.skillNodes)?state.skillNodes.map(id=>String(id).replace(/^hero-mana-/,'hero-energy-')):[];
+state.abilityPoints=Number.isFinite(state.abilityPoints)?state.abilityPoints:Math.max(0,state.level-1);state.skillNodes=Array.isArray(state.skillNodes)?state.skillNodes.map(id=>String(id).replace(/^hero-mana-/,'hero-energy-')):[];state.goldTreeNodes=state.goldTreeNodes&&typeof state.goldTreeNodes==='object'&&!Array.isArray(state.goldTreeNodes)?state.goldTreeNodes:{};
 state.ascensionClass=typeof state.ascensionClass==='string'?state.ascensionClass:'';state.ascensionPoints=Number.isFinite(state.ascensionPoints)?state.ascensionPoints:(state.level>=10?1+Math.floor(state.level/25):0);
 const ascensionBranchIds=['warrior','archer','mage'];let savedAscensionPath=Array.isArray(state.ascensionPath)?state.ascensionPath.filter(id=>id==='adventurer'||ascensionBranchIds.includes(id)):[];if(!savedAscensionPath.length&&state.ascensionClass)savedAscensionPath=state.ascensionClass==='adventurer'?['adventurer']:['adventurer',state.ascensionClass];state.ascensionPath=savedAscensionPath[0]==='adventurer'?['adventurer',...savedAscensionPath.slice(1).filter(id=>ascensionBranchIds.includes(id)).slice(0,1)]:[];state.ascensionClass=state.ascensionPath.at(-1)||'';
 function saveGame(){try{const savedState={...state,godMode:false};if(state.godMode){savedState.hp=Math.min(state.hp,state.maxHp*(1+abilityBonus('health')));savedState.energy=Math.min(state.energy,state.maxEnergy*(1+abilityBonus('energy')))}localStorage.setItem(SAVE_KEY,JSON.stringify({state:savedState,distance,pos:lastRealGpsPos,displayPos:pos,realGps:!!lastRealGpsPos,merchantPos,priestPos,log:Array.from($('log').children).map(p=>({text:p.textContent,kind:p.className})),monsters:monsters.map(({marker,...m})=>m)}))}catch{}}
@@ -114,15 +114,16 @@ const attributeNames={attack:'Attack',defense:'Defense',dexterity:'Dexterity',vi
 function itemDamage(item){return Number(item?.damage??item?.attackBonus)||0}
 function itemStats(item){const stats={...(item?.stats||{})};if(item?.defenseBonus&&!Number.isFinite(stats.defense))stats.defense=Number(item.defenseBonus);if(item?.attributeBonuses)Object.assign(stats,item.attributeBonuses);return stats}
 function itemAvailableToCharacter(item){const activeClass=state.ascensionClass||'adventurer';return (!Array.isArray(item?.allowedClasses)||item.allowedClasses.includes(activeClass))&&state.level>=(Number(item?.requiredLevel)||1)}
-function totalAttributes(){const totals={...state.attributes};for(const item of Object.values(state.equipment)){if(!itemAvailableToCharacter(item))continue;for(const [key,value] of Object.entries(itemStats(item)))if(Object.prototype.hasOwnProperty.call(totals,key))totals[key]+=Number(value)||0}totals.attack*=1+abilityBonus('attack');totals.defense*=1+abilityBonus('defense');return totals}
+function goldTreeBonus(key){return window.GoldTree?.getBonuses?.()[key]||0}
+function totalAttributes(){const totals={...state.attributes};for(const item of Object.values(state.equipment)){if(!itemAvailableToCharacter(item))continue;for(const [key,value] of Object.entries(itemStats(item)))if(Object.prototype.hasOwnProperty.call(totals,key))totals[key]+=Number(value)||0}for(const key of Object.keys(totals))totals[key]*=1+abilityBonus(key)+goldTreeBonus(key);return totals}
 function renderEquipmentAttributes(){const panel=$('equipmentAttributes');if(!panel)return;const attributes=totalAttributes();panel.innerHTML=Object.entries(attributeNames).map(([key,label])=>`<div><span>${label}</span><b>${formatGameNumber(attributes[key])}</b></div>`).join('')}
 function totalAttack(){if(state.godMode)return 1000000;const a=totalAttributes(),main=itemAvailableToCharacter(state.equipment['Оружие'])?itemDamage(state.equipment['Оружие']):0,offhand=itemAvailableToCharacter(state.equipment['2 рука'])?itemDamage(state.equipment['2 рука']):0,baseDamage=5+main+offhand;return baseDamage*(1+a.attack/50)*(1+a.dexterity/75)}
-function effectiveMaxHp(){return state.godMode?1000000:state.maxHp*(1+abilityBonus('health'))}
-function effectiveMaxEnergy(){return state.godMode?1000000:state.maxEnergy*(1+abilityBonus('energy'))}
+function effectiveMaxHp(){return state.godMode?1000000:state.maxHp*(1+abilityBonus('health')+goldTreeBonus('health'))}
+function effectiveMaxEnergy(){return state.godMode?1000000:state.maxEnergy*(1+abilityBonus('energy')+goldTreeBonus('energy'))}
 function effectiveDefense(){if(state.godMode)return 1000000;return totalAttributes().defense}
 function criticalChance(){return Math.min(1,.01+totalAttributes().speed*.005/100)}
 function rollPlayerDamage(multiplier=1){const critical=Math.random()<criticalChance();return{damage:Math.max(1,totalAttack()*multiplier*(critical?2:1)),critical}}
-function rarityRoll(){let tier=0;const quality=1+abilityBonus('rarity');if(Math.random()<Math.min(.95,.5*quality))tier=1;if(tier>=1&&Math.random()<Math.min(.95,.5*quality))tier=2;if(tier>=2&&Math.random()<Math.min(.95,.5*quality))tier=3;if(tier>=3&&Math.random()<Math.min(.95,.4*quality))tier=4;return rarities[tier]}
+function rarityRoll(){let tier=0;const quality=1+abilityBonus('rarity')+goldTreeBonus('rarity');if(Math.random()<Math.min(.95,.5*quality))tier=1;if(tier>=1&&Math.random()<Math.min(.95,.5*quality))tier=2;if(tier>=2&&Math.random()<Math.min(.95,.5*quality))tier=3;if(tier>=3&&Math.random()<Math.min(.95,.4*quality))tier=4;return rarities[tier]}
 const gearPrefixes=['Северный','Кованый','Лунный','Забытый','Грозовой','Рунный','Странника','Кровавый','Сумрачный','Звёздный'],gearSuffixes=['предела','рассвета','дозора','бури','истока'],gearClasses=['warrior','archer','mage'];
 const gearTemplates=gearClasses.flatMap(classId=>gearSlots.flatMap(type=>Array.from({length:50},(_,index)=>({classId,type,variant:index+1,requiredLevel:Math.floor(index/10)*25+1}))));
 const rarityPower={common:1,uncommon:1.4,rare:1.8,epic:2.3,legendary:3};
@@ -136,7 +137,9 @@ function makeBackpackDrop(playerLevel,rarity,key){const maxLevel=Math.max(1,Math
 function ascensionMilestone(level){return level===10||(level>=25&&level%25===0)}
 window.GameAPI={
  getSkillSnapshot(){return{level:state.level,abilityPoints:state.abilityPoints,purchased:[...state.skillNodes]}},
- purchaseSkillNode(node){if(!node||typeof node.id!=='string'||!Number.isInteger(node.cost)||node.cost<1||state.skillNodes.includes(node.id)||state.abilityPoints<node.cost)return false;const hpBefore=effectiveMaxHp(),energyBefore=effectiveMaxEnergy();state.abilityPoints-=node.cost;state.skillNodes.push(node.id);state.hp=Math.min(effectiveMaxHp(),state.hp+effectiveMaxHp()-hpBefore);state.energy=Math.min(effectiveMaxEnergy(),state.energy+effectiveMaxEnergy()-energyBefore);render();return true},
+ purchaseSkillNode(node){if(!node||typeof node.id!=='string'||!Number.isInteger(node.cost)||node.cost<1||state.skillNodes.includes(node.id)||state.abilityPoints<node.cost)return false;const hpBefore=effectiveMaxHp(),energyBefore=effectiveMaxEnergy();state.abilityPoints-=node.cost;state.skillNodes.push(node.id);state.hp=Math.min(effectiveMaxHp(),state.hp+effectiveMaxHp()-hpBefore);state.energy=Math.min(effectiveMaxEnergy(),state.energy+effectiveMaxEnergy()-energyBefore);render();scheduleSave();return true},
+ getGoldTreeSnapshot(){return{coins:state.coins,purchased:{...state.goldTreeNodes}}},
+ purchaseGoldTreeNode(node){if(!node||typeof node.id!=='string'||!Number.isInteger(node.cost)||node.cost<1)return false;const ranks=Math.max(0,Math.floor(Number(state.goldTreeNodes[node.id])||0));if(ranks>=node.maxRank||state.coins<node.cost||node.parentId&&!(Number(state.goldTreeNodes[node.parentId])>0))return false;const hpBefore=effectiveMaxHp(),energyBefore=effectiveMaxEnergy();state.coins-=node.cost;state.goldTreeNodes[node.id]=ranks+1;state.hp=Math.min(effectiveMaxHp(),state.hp+effectiveMaxHp()-hpBefore);state.energy=Math.min(effectiveMaxEnergy(),state.energy+effectiveMaxEnergy()-energyBefore);render();scheduleSave();return true},
  getAscensionSnapshot(){return{level:state.level,points:state.ascensionPoints,classId:state.ascensionClass,selectedNodes:[...state.ascensionPath],coins:state.coins}},
  chooseAscensionClass(classId){if(state.ascensionPoints<1)return false;if(classId==='adventurer'){if(state.ascensionPath.length||state.level<10)return false}else if(!ascensionBranchIds.includes(classId)||state.ascensionPath.length!==1||state.ascensionPath[0]!=='adventurer'||state.level<25)return false;state.ascensionPoints--;state.ascensionPath.push(classId);state.ascensionClass=classId;render();scheduleSave();return true},
  resetAscension(){const cost=10000;if(!state.ascensionPath.length||state.coins<cost)return false;const refund=state.ascensionPath.length;state.coins-=cost;state.ascensionPoints+=refund;state.ascensionPath=[];state.ascensionClass='';render();scheduleSave();log(`Священник сбросил ветку Вознесения за ${formatGameNumber(cost)} монет. Возвращено ${refund} поинтов.`,'good');return true},
@@ -335,10 +338,10 @@ function renderEnemy(){if(!enemy)return;$('enemyHpText').textContent=`${formatGa
 function finishEnemy(){
  if(!enemy||!monsters.includes(enemy))return;
  const defeated=enemy;
- const earnedGold=defeated.coins*(1+abilityBonus('gold'));
+ const earnedGold=defeated.coins*(1+abilityBonus('gold')+goldTreeBonus('gold'));
  state.xp+=defeated.xp;state.coins+=earnedGold;state.encounters++;
  log(`Победа над ${defeated.name}! +${formatGameNumber(defeated.xp)} опыта, +${formatGameNumber(earnedGold)} монет.`,'good');
- if(Math.random()<Math.min(1,.05*(1+abilityBonus('drop')))){
+ if(Math.random()<Math.min(1,.05*(1+abilityBonus('drop')+goldTreeBonus('drop')))){
   const [rarity,key]=rarityRoll(),item=Math.random()<1/7?makeBackpackDrop(state.level,rarity,key):makeGearDrop(state.level,rarity,key);
   if(storeInventoryItem(item)){log(`Выпал предмет: ${item.name}, ур. ${item.level}.`,'good');renderBag()}
   else log('Предмет выпал, но рюкзак полон.','bad');
@@ -431,7 +434,8 @@ $('gpsGateBtn').addEventListener('click',()=>requestGpsAccess(true));
 window.__gameGpsHandlerReady=true;
 setInterval(()=>{for(const [id,p] of Object.entries(peers))if(Date.now()-p.at>10000){delete peers[id];if(peerMarkers[id])map.removeLayer(peerMarkers[id]);delete peerMarkers[id]}syncPeer()},5000);
 setInterval(()=>{const maxHp=effectiveMaxHp(),maxEnergy=effectiveMaxEnergy(),attributes=totalAttributes(),hpRegen=.0025+attributes.vitality/100*.0005,resourceRegen=.0075+attributes.wisdom/100*.001;if(state.hp<maxHp&&!enemy)state.hp=Math.min(maxHp,state.hp+maxHp*hpRegen);if(state.energy<maxEnergy&&!enemy)state.energy=Math.min(maxEnergy,state.energy+maxEnergy*resourceRegen);render()},1000);
-setInterval(()=>{if(gpsAllowed&&!document.hidden&&monsters.length<25)spawnEnemy(false)},10000);
+function scheduleMonsterSpawn(){setTimeout(()=>{if(gpsAllowed&&!document.hidden&&monsters.length<25)spawnEnemy(false);scheduleMonsterSpawn()},Math.max(2000,Math.round(10000/(1+goldTreeBonus('monsterSpeed')))))}
+scheduleMonsterSpawn();
 window.addEventListener('resize',()=>requestAnimationFrame(()=>map.invalidateSize()));window.addEventListener('orientationchange',()=>setTimeout(()=>map.invalidateSize(),250));
 renderBag();
 if(Array.isArray(savedGame.log)){const logBox=$('log');logBox.replaceChildren();savedGame.log.slice(0,18).reverse().forEach(entry=>{const p=document.createElement('p');p.textContent=String(entry.text||'');if(['good','bad'].includes(entry.kind))p.className=entry.kind;logBox.append(p)})}
