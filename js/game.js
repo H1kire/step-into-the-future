@@ -51,8 +51,10 @@ function setupPanels(){
  document.querySelectorAll('.panel-close').forEach(button=>button.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();button.closest('.floating-panel').classList.add('hidden');if(button.closest('#actionMenu'))menuButton.setAttribute('aria-expanded','false')}));
  const fitPanelToViewport=(panel,top=panel.getBoundingClientRect().top)=>{
   if(panel.id==='playerHud')return;
+  const rect=panel.getBoundingClientRect();
   const headerBottom=document.querySelector('header')?.getBoundingClientRect().bottom||0;
-  const safeTop=Math.max(headerBottom,Math.min(innerHeight-40,top)),left=Math.max(0,Math.min(innerWidth-panel.offsetWidth,panel.getBoundingClientRect().left));
+  const safeTop=Math.max(headerBottom,Math.min(innerHeight-40,top)),left=Math.max(0,Math.min(innerWidth-panel.offsetWidth,rect.left));
+  panel.style.transform='none';
   panel.style.left=`${left}px`;panel.style.top=`${safeTop}px`;panel.style.bottom='auto';
   panel.style.maxHeight=`${Math.max(40,innerHeight-safeTop-8)}px`;
  };
