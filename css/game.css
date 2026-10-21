@@ -44,7 +44,8 @@ header{position:fixed;inset:0 0 auto;height:calc(58px + env(safe-area-inset-top,
 .ability-summary{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;color:var(--gold);font-size:13px;margin:4px 0 10px}
 .tree-switch{display:flex;gap:8px;margin:6px 0 10px}.tree-tab{flex:1;min-height:40px}.tree-tab.active{border-color:#ffd166;background:#4b3b1e;color:#ffe3a0}.tree-zoom-toolbar{display:flex;align-items:center;justify-content:flex-end;gap:6px;margin:0 0 7px}.tree-zoom-toolbar[hidden]{display:none}.tree-zoom-toolbar button{min-width:38px;min-height:34px;padding:4px 9px}.tree-zoom-toolbar span{min-width:48px;text-align:center;color:var(--gold);font-size:12px;font-weight:800}
 .ability-graph-scroll{height:min(50vh,520px);overflow:auto;border:1px solid #334155;border-radius:10px;background:#101720;touch-action:pan-x pan-y}
-.ability-graph-scroll.gold-tree-touch{touch-action:none;overscroll-behavior:contain}
+.ability-graph-scroll.gold-tree-touch{position:relative;overflow:hidden;touch-action:none;overscroll-behavior:contain}
+.ability-graph-scroll.gold-tree-touch #abilityGraph{position:absolute;left:0;top:0;transform-origin:0 0;max-width:none;min-height:0;will-change:transform}
 #abilityGraph{display:block;width:1240px;max-width:none;height:auto;min-height:100%;overflow:visible}
 .tree-branch-title{font-size:19px;font-weight:800}.tree-branch-root{fill:#aebdce;font-size:11px;font-weight:700;letter-spacing:1px}.tree-lane-title{fill:#e2e8f0;font-size:12px;font-weight:700}
 .tree-link{fill:none;stroke-width:2;opacity:.3}.tree-link-done{opacity:.85;stroke-width:3}
