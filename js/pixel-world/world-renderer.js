@@ -1,7 +1,7 @@
 import { createCharacterSprite } from "./character-sprites.js?v=rotmg-inspired-1";
 
 export const WORLD_SIZE = 100_000;
-export const TILE_SIZE = 16;
+export const TILE_SIZE = 32;
 export const CHUNK_TILES = 16;
 export const CHUNK_SIZE = TILE_SIZE * CHUNK_TILES;
 const PALETTE = {
@@ -41,7 +41,25 @@ function terrainAt(tx, ty, seed) {
   return "grass";
 }
 
-function drawTile(ctx, tx, ty, seed) {
+function drawTile(ctx, tx, ty, seed, atlas) {
+  const terrain = terrainAt(tx, ty, seed);
+  const r = hash2(tx, ty, seed + 19);
+  const x = tx * TILE_SIZE, y = ty * TILE_SIZE;
+  if (atlas && atlas.complete && atlas.naturalWidth) {
+    const adjacentWater = terrain === "sand" && (
+      terrainAt(tx + 1, ty, seed) === "water" || terrainAt(tx - 1, ty, seed) === "water" ||
+      terrainAt(tx, ty + 1, seed) === "water" || terrainAt(tx, ty - 1, seed) === "water"
+    );
+    let index;
+    if (adjacentWater) index = r > 0.5 ? 10 : 11;
+    else if (terrain === "water") index = r > 0.5 ? 8 : 9;
+    else if (terrain === "sand") index = r > 0.5 ? 6 : 7;
+    else if (terrain === "stone") index = r > 0.65 ? 12 : (r > 0.3 ? 13 : 14);
+    else if (terrain === "forest") index = r > 0.72 ? 2 : (r > 0.35 ? 3 : 1);
+    else index = r > 0.8 ? 15 : 0;
+    ctx.drawImage(atlas, (index % 4) * 32, Math.floor(index / 4) * 32, 32, 32, x, y, TILE_SIZE, TILE_SIZE);
+    return;
+  }
   const terrain = terrainAt(tx, ty, seed);
   const colors = PALETTE[terrain];
   const r = hash2(tx, ty, seed + 19);
@@ -87,6 +105,9 @@ export class PixelWorldRenderer {
     this.ctx = canvas.getContext("2d", { alpha: false });
     this.ctx.imageSmoothingEnabled = false;
     this.seed = options.seed ?? Math.floor(Math.random() * 0x7fffffff);
+    this.terrainAtlas = new Image();
+    this.terrainAtlas.addEventListener("load", () => this.chunkCache.clear());
+    this.terrainAtlas.src = new URL("../../assets/pixel-world/terrain.png?v=pixel-atlas-1", import.meta.url).href;
     this.worldSize = options.worldSize ?? WORLD_SIZE;
     this.speed = options.speed ?? 180;
     this.onMove = options.onMove ?? null;
@@ -192,7 +213,7 @@ export class PixelWorldRenderer {
     ctx.imageSmoothingEnabled = false;
     for (let ty = 0; ty < CHUNK_TILES; ty++) {
       for (let tx = 0; tx < CHUNK_TILES; tx++) {
-        drawTile(ctx, cx * CHUNK_TILES + tx, cy * CHUNK_TILES + ty, this.seed);
+        drawTile(ctx, cx * CHUNK_TILES + tx, cy * CHUNK_TILES + ty, this.seed, this.terrainAtlas);
       }
     }
     this.chunkCache.set(key, canvas);
