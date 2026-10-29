@@ -15,9 +15,9 @@ for (const character of getCharacterDefinitions()) {
   const stage = document.createElement("div");
   stage.className = "sprite-stage";
   const sprite = createCharacterSprite(character.id);
-  // Override the canvas's native 16×20 CSS size for a crisp enlarged preview.
+  // Enlarge the 24×28 sprite without smoothing for a crisp preview.
   sprite.style.width = "96px";
-  sprite.style.height = "120px";
+  sprite.style.height = "112px";
   sprite.setAttribute("role", "img");
   sprite.setAttribute("aria-label", character.name);
   stage.append(sprite);
