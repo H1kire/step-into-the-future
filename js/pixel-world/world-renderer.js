@@ -224,7 +224,7 @@ export class PixelWorldRenderer {
     const minCx = Math.max(0, Math.floor(left / CHUNK_SIZE));
     const maxCx = Math.min(Math.ceil(this.worldSize / CHUNK_SIZE) - 1, Math.floor((left + viewW) / CHUNK_SIZE));
     const minCy = Math.max(0, Math.floor(top / CHUNK_SIZE));
-    const maxCy = Math.min(Math.ceil(WORLD_SIZE / CHUNK_SIZE) - 1, Math.floor((top + viewH) / CHUNK_SIZE));
+    const maxCy = Math.min(Math.ceil(this.worldSize / CHUNK_SIZE) - 1, Math.floor((top + viewH) / CHUNK_SIZE));
     this.visibleChunks.clear();
     for (let cy = minCy; cy <= maxCy; cy++) {
       for (let cx = minCx; cx <= maxCx; cx++) {
