@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Городские странники — Pixel RPG</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-<link rel="stylesheet" href="./css/game.css?v=rotmg-inspired-1">
+<link rel="stylesheet" href="./css/game.css?v=rpg-systems-2">
 </head>
 <body class="site-locked">
 <div id="appShell">
@@ -31,7 +31,7 @@
 <div class="status" id="combatStatus">Победи врага, чтобы получить опыт и монеты.</div>
 </section>
 <section class="card"><h2>Журнал приключений</h2><div class="log" id="log"><p>Мир ждёт своего исследователя. Исследуй пиксельный мир и найди первого врага!</p></div></section>
-<section class="card"><h2>Снаряжение</h2><div class="bag-summary"><span id="bagCoins">🪙 0</span><span id="bagPotions">🧪 1/10</span><span id="bagCount">🎒 24 слота · 0 предметов</span></div><div class="equipment-layout"><div class="equipment-attributes" id="equipmentAttributes" aria-label="Атрибуты персонажа"></div><div class="equip-layout"><div class="paperdoll" aria-hidden="true">🧍</div><div class="equip" id="equipSlots"></div></div></div><div class="inventory-heading"><b>Инвентарь</b><span id="inventoryCapacity">0 / 24</span></div><div class="inventory" id="inventorySlots"></div><div class="trash-slot" id="trashSlot" aria-label="Мусорка: перетащи сюда предмет, чтобы удалить">🗑 Удалить предмет</div></section>
+<section class="card"><h2>Снаряжение</h2><div class="bag-summary"><span id="bagCoins">🪙 0</span><span id="bagPotions">🧪 1/10</span><span id="bagCount">🎒 24 слота · 0 предметов</span></div><div class="equipment-layout"><div class="equipment-attributes" id="equipmentAttributes" aria-label="Атрибуты персонажа"></div><div class="equip-layout"><div class="paperdoll" aria-hidden="true">🧍</div><div class="equip" id="equipSlots"></div></div></div><div class="inventory-heading"><b>Инвентарь</b><div class="inventory-heading-tools"><span id="inventoryTabs" class="inventory-tabs" aria-label="Страницы инвентаря"></span><span id="inventoryCapacity">0 / 24</span></div></div><div class="inventory" id="inventorySlots"></div><div class="trash-slot" id="trashSlot" aria-label="Мусорка: перетащи сюда предмет, чтобы удалить">🗑 Удалить предмет</div></section>
 <section class="card"><h2>Чат поблизости · 150 м</h2><div class="chatlog" id="chatlog"><p>Сообщения игроков рядом появятся здесь.</p></div><div class="sub" id="chatStatus" aria-live="polite">Подключение чата…</div><div class="chatrow"><input id="chatInput" maxlength="180" placeholder="Сообщение"><button class="primary" id="chatSend">➤</button></div></section>
 <section class="card floating-panel hidden merchant-panel" id="merchantPanel"><div class="panel-title"><h2>Дружественный торговец</h2><button type="button" class="secondary panel-close" aria-label="Закрыть торговца">✕</button></div><div class="status" id="merchantDistance"></div><div class="merchant-wallet" id="merchantWallet"></div><h3>Купить</h3><div id="merchantGoods"></div><h3>Продать</h3><div id="merchantSellList"></div></section>
 <footer>Тестовый пиксельный мир использует виртуальные координаты: GPS и реальная ходьба не нужны. Вход через Google и права разработчика Firebase сохранены.</footer>
@@ -46,8 +46,8 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js'"></script>
 <script src="./js/game-images.js"></script>
 <script src="./js/number-format.js"></script>
-<script src="./js/game.js?v=pixel-atlas-4"></script>
-<script src="./js/ability-tree.js?v=ability-radial-1"></script>
+<script src="./js/game.js?v=rpg-systems-2"></script>
+<script src="./js/ability-tree.js?v=branch-spacing-2"></script>
 <script src="./js/ascension-tree.js?v=ascension-path-2"></script>
 <script type="module" src="./js/firebase-presence.js"></script>
 <script type="module" src="./js/pixel-world/pixel-game-map.js?v=pixel-atlas-4"></script>
