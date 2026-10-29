@@ -241,7 +241,7 @@ function spawnEnemy(force=true){
  const angle=Math.random()*Math.PI*2,meters=Math.random()*45;
  const dLat=(meters/111320)*Math.cos(angle),dLng=(meters/(111320*Math.max(.2,Math.cos(pos[0]*Math.PI/180))))*Math.sin(angle);
  const epos=[pos[0]+dLat,pos[1]+dLng];
- monster.id=crypto.randomUUID?crypto.randomUUID():String(Date.now()+Math.random());monster.pos=epos;placeMonsterMarker(monster);monsters.push(monster);
+ monster.id=crypto.randomUUID?crypto.randomUUID():String(Date.now()+Math.random());monster.pos=epos;placeMonsterMarker(monster);monsters.push(monster);scheduleSave();
  log(`На карте появился противник: ${f.name}. Нажми на него, чтобы начать бой.`,'bad');render();
 }
 function monsterImageKey(monster){if(['slime','goblin','wolf','golem','skeleton','bat','mushroom','bandit','wisp'].includes(monster?.imageKey))return monster.imageKey;const name=String(monster?.name||'').toLowerCase();if(name.includes('гоблин'))return'goblin';if(name.includes('волк'))return'wolf';if(name.includes('голем'))return'golem';return'slime'}
