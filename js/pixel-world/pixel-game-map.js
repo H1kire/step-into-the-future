@@ -8,7 +8,7 @@ const canvas = document.querySelector("#pixelGameCanvas");
 if (canvas) {
   const world = new PixelWorldRenderer(canvas, {
     worldSize: 2400,
-    speed: 32,
+    speed: 85,
     seed: 284731,
     onMove: (x, y) => {
       const now = performance.now();
