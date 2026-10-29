@@ -1,34 +1,54 @@
-import { createCharacterSprite, getCharacterDefinitions } from "./character-sprites.js?v=pixel-polish-3";
-import { PixelWorldRenderer, WORLD_SIZE } from "./world-renderer.js?v=pixel-polish-3";
+import { createCharacterSprite, getCharacterDefinitions } from "./character-sprites.js?v=rotmg-inspired-1";
+import { createMonsterSprite, createNpcSprite, getMonsterDefinitions } from "./monster-sprites.js?v=rotmg-inspired-1";
+import { PixelWorldRenderer, WORLD_SIZE } from "./world-renderer.js?v=rotmg-inspired-1";
 
-const gallery = document.querySelector("#characterGallery");
+function addSpriteCard(container, name, description, sprite, kind = "character") {
+  const card = document.createElement("article");
+  card.className = "character-card";
+  const stage = document.createElement("div");
+  stage.className = "sprite-stage";
+  const image = document.createElement("div");
+  image.className = "sprite-image";
+  image.append(sprite);
+  sprite.style.width = kind === "character" ? "96px" : "84px";
+  sprite.style.height = "auto";
+  sprite.style.imageRendering = "pixelated";
+  sprite.setAttribute("role", "img");
+  sprite.setAttribute("aria-label", name);
+  stage.append(image);
+  const title = document.createElement("h3");
+  title.textContent = name;
+  const detail = document.createElement("p");
+  detail.textContent = description;
+  card.append(stage, title, detail);
+  container.append(card);
+}
+
+const characterGallery = document.querySelector("#characterGallery");
+for (const character of getCharacterDefinitions()) {
+  addSpriteCard(characterGallery, character.name, character.role, createCharacterSprite(character.id));
+}
+
+const monsterGallery = document.querySelector("#monsterGallery");
+for (const monster of getMonsterDefinitions()) {
+  addSpriteCard(monsterGallery, monster.name, `Угроза: ${monster.threat}`, createMonsterSprite(monster.id), "monster");
+}
+
+const npcGallery = document.querySelector("#npcGallery");
+for (const npc of [
+  { id: "merchant", name: "Торговец", role: "Товары, снаряжение и припасы" },
+  { id: "priest", name: "Священник", role: "Поддержка и восстановление" },
+  { id: "blacksmith", name: "Кузнец", role: "Ремонт и улучшение экипировки" }
+]) {
+  addSpriteCard(npcGallery, npc.name, npc.role, createNpcSprite(npc.id), "npc");
+}
+
 const selector = document.querySelector("#characterSelect");
 const zoomSelector = document.querySelector("#zoomSelect");
 const canvas = document.querySelector("#worldCanvas");
 const chunkStatus = document.querySelector("#chunkStatus");
 const coords = document.querySelector("#worldCoords");
 const seedLabel = document.querySelector("#worldSeed");
-
-for (const character of getCharacterDefinitions()) {
-  const card = document.createElement("article");
-  card.className = "character-card";
-  const stage = document.createElement("div");
-  stage.className = "sprite-stage";
-  const sprite = createCharacterSprite(character.id);
-  // Enlarge the 24×28 sprite without smoothing for a crisp preview.
-  sprite.style.width = "96px";
-  sprite.style.height = "112px";
-  sprite.setAttribute("role", "img");
-  sprite.setAttribute("aria-label", character.name);
-  stage.append(sprite);
-  const title = document.createElement("h3");
-  title.textContent = character.name;
-  const description = document.createElement("p");
-  description.textContent = character.role;
-  card.append(stage, title, description);
-  gallery.append(card);
-}
-
 const world = new PixelWorldRenderer(canvas);
 world.setZoom(zoomSelector.value);
 seedLabel.textContent = `Seed: ${world.seed}`;
