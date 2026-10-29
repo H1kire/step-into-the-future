@@ -225,7 +225,14 @@ export class PixelWorldRenderer {
           const roll = hash2(wx, wy, this.seed + 901);
           if (terrain === "water") continue;
           let prop = -1;
-          if ((terrain === "grass" || terrain === "forest") && roll > 0.91) prop = roll > 0.985 ? 0 : (roll > 0.96 ? 1 : 2);
+          if ((terrain === "grass" || terrain === "forest") && roll > 0.9992) prop = 16;
+          else if ((terrain === "grass" || terrain === "forest") && roll > 0.9984) prop = 15;
+          else if ((terrain === "grass" || terrain === "forest") && roll > 0.9976) prop = 14;
+          else if ((terrain === "grass" || terrain === "forest") && roll > 0.9968) prop = 13;
+          else if ((terrain === "grass" || terrain === "forest") && roll > 0.996) prop = 12;
+          else if ((terrain === "grass" || terrain === "forest") && roll > 0.995) prop = 11;
+          else if ((terrain === "grass" || terrain === "forest") && roll > 0.994) prop = 10;
+          else if ((terrain === "grass" || terrain === "forest") && roll > 0.91) prop = roll > 0.985 ? 0 : (roll > 0.96 ? 1 : 2);
           else if (terrain === "grass" && roll > 0.78) prop = roll > 0.88 ? 4 : 6;
           else if (terrain === "sand" && roll > 0.97) prop = 8;
           else if (terrain === "stone" && roll > 0.76) prop = 8;
