@@ -4,11 +4,11 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Бой · Городские странники</title>
-<link rel="stylesheet" href="./css/battle.css?v=battle-1">
+<link rel="stylesheet" href="./css/battle.css?v=battle-turn-2">
 </head>
 <body>
 <header class="battle-top"><a class="exit" id="exitBattle" href="./index.html">← Выйти из боя</a><div class="battle-title">⚔️ СРАЖЕНИЕ</div><div class="top-level" id="playerLevelTop">Уровень 1</div></header>
-<main class="arena">
+<section class="turn-track-wrap" aria-label="Последовательность ходов"><div class="turn-track-title">ПОРЯДОК ХОДОВ</div><div class="turn-track" id="turnTrack"><div class="turn-step active" data-turn-step="player"><span>1</span><b>Твой ход</b></div><span class="turn-arrow">→</span><div class="turn-step" data-turn-step="enemy"><span>2</span><b>Ход врага</b></div><span class="turn-arrow">→</span><div class="turn-step" data-turn-step="player-next"><span>3</span><b>Твой ход</b></div></div></section><main class="arena">
 <section class="fighter player-fighter">
   <div class="fighter-label">ТВОЙ ГЕРОЙ</div><div class="sprite-stage player-stage"><div id="playerSprite" class="sprite"></div></div>
   <h2 id="playerName">Странник</h2><div class="level-label" id="playerLevel">Уровень 1</div>
@@ -36,5 +36,5 @@
   <div class="reward-note" id="rewardNote" hidden></div>
   <button id="returnAfterFight" class="action-button return" hidden>Вернуться на карту</button>
 </section>
-<script type="module" src="./js/battle.js?v=battle-1"></script>
+<script type="module" src="./js/battle.js?v=battle-turn-2"></script>
 </body></html>
