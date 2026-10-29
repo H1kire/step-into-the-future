@@ -3,13 +3,13 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Городские странники — GPS RPG</title>
+<title>Городские странники — Pixel RPG</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <link rel="stylesheet" href="./css/game.css?v=ability-radial-1">
 </head>
 <body class="site-locked">
 <div id="appShell">
-<header><div><div class="brand">🧭 ГОРОДСКИЕ <span>СТРАННИКИ</span></div><div class="sub">GPS-приключение · мини RPG</div></div><div style="text-align:right"><div class="sub" id="gpsHead">GPS не подключён</div><div class="sub" id="onlineStatus">Онлайн: подключение…</div></div></header>
+<header><div><div class="brand">🧭 ГОРОДСКИЕ <span>СТРАННИКИ</span></div><div class="sub">GPS-приключение · мини RPG</div></div><div style="text-align:right"><div class="sub" id="gpsHead">Пиксельный мир · свободное перемещение</div><div class="sub" id="onlineStatus">Онлайн: подключение…</div></div></header>
 <main>
 <aside>
 <section class="card">
@@ -31,36 +31,19 @@
 <div class="status">⚡ Энергия: <b id="energyText">50 / 50</b></div><button class="secondary full" id="slashBtn">⚔️ Рассечение (15 энергии)</button>
 <div class="status" id="combatStatus">Победи врага, чтобы получить опыт и монеты.</div>
 </section>
-<section class="card"><h2>Журнал приключений</h2><div class="log" id="log"><p>Мир ждёт своего исследователя. Выйди на прогулку и найди первого врага!</p></div></section>
+<section class="card"><h2>Журнал приключений</h2><div class="log" id="log"><p>Мир ждёт своего исследователя. Исследуй пиксельный мир и найди первого врага!</p></div></section>
 <section class="card"><h2>Снаряжение</h2><div class="bag-summary"><span id="bagCoins">🪙 0</span><span id="bagPotions">🧪 1/10</span><span id="bagCount">🎒 24 слота · 0 предметов</span></div><div class="equipment-layout"><div class="equipment-attributes" id="equipmentAttributes" aria-label="Атрибуты персонажа"></div><div class="equip-layout"><div class="paperdoll" aria-hidden="true">🧍</div><div class="equip" id="equipSlots"></div></div></div><div class="inventory-heading"><b>Инвентарь</b><span id="inventoryCapacity">0 / 24</span></div><div class="inventory" id="inventorySlots"></div><div class="trash-slot" id="trashSlot" aria-label="Мусорка: перетащи сюда предмет, чтобы удалить">🗑 Удалить предмет</div></section>
 <section class="card"><h2>Чат поблизости · 150 м</h2><div class="chatlog" id="chatlog"><p>Сообщения игроков рядом появятся здесь.</p></div><div class="sub" id="chatStatus" aria-live="polite">Подключение чата…</div><div class="chatrow"><input id="chatInput" maxlength="180" placeholder="Сообщение"><button class="primary" id="chatSend">➤</button></div></section>
 <section class="card floating-panel hidden merchant-panel" id="merchantPanel"><div class="panel-title"><h2>Дружественный торговец</h2><button type="button" class="secondary panel-close" aria-label="Закрыть торговца">✕</button></div><div class="status" id="merchantDistance"></div><div class="merchant-wallet" id="merchantWallet"></div><h3>Купить</h3><div id="merchantGoods"></div><h3>Продать</h3><div id="merchantSellList"></div></section>
 <footer>Демо-прототип. Координаты передаются в Firebase для показа игроков рядом; игровой прогресс хранится в браузере.</footer>
 </aside>
-<div class="mapwrap"><div id="map"></div><div class="mapbadge">📍 <b id="mapState">Ожидание координат</b><br><span id="coords">Карта загружена</span></div><div class="mapbuttons"><button class="secondary" id="centerBtn">🎯 К персонажу</button></div></div>
+<div class="mapwrap pixel-mapwrap"><div id="map" aria-hidden="true"></div><canvas id="pixelGameCanvas" aria-label="Пиксельная карта игры: кликни, чтобы переместиться, или используй WASD и стрелки"></canvas><div class="mapbadge pixel-mapbadge"><b id="mapState">Пиксельный мир</b><br><span id="coords">Клик — идти · WASD — движение</span></div><div class="pixel-map-hint">Клик — идти · WASD / стрелки — двигаться · колёсико — масштаб</div><div class="mapbuttons"><button class="secondary" id="centerBtn">🎯 К персонажу</button></div></div>
 </main>
 </div>
 <section class="card floating-panel hidden item-detail-panel" id="itemDetailPanel" aria-live="polite"><div class="panel-title"><h2 id="itemDetailTitle">Предмет</h2><button type="button" class="secondary panel-close" aria-label="Закрыть информацию о предмете">✕</button></div><div class="item-detail-image" id="itemDetailImage">🎒</div><div id="itemImageCredit" class="image-credit"></div><div id="itemDetailRarity"></div><div id="itemDetailBody"></div></section>
 <section class="card floating-panel hidden priest-panel" id="priestPanel"><div class="panel-title"><h2>Священник</h2><button type="button" class="secondary panel-close" aria-label="Закрыть священника">✕</button></div><div class="priest-profile"><span class="priest-avatar" aria-hidden="true">🧙‍♂️</span><div><b>Священник путей</b><div class="sub" id="priestDistance">Найди священника на карте.</div></div></div><div class="priest-service">Сбросить ветку Вознесения и вернуть потраченные поинты за <b>10 000 🪙</b>.</div><div class="priest-wallet" id="priestWallet">Твои монеты: 0 🪙</div><div class="sub" id="priestStatus" aria-live="polite"></div><button type="button" class="primary full" id="priestResetButton" disabled>Сбросить Вознесение · 10 000 🪙</button></section>
-<section id="gpsGate" class="gps-gate" role="dialog" aria-modal="true" aria-labelledby="gpsGateTitle">
- <div class="gps-gate-card"><div class="gps-gate-icon">📍</div><h1 id="gpsGateTitle">Для игры нужен GPS</h1><p>Разреши браузеру доступ к геопозиции и дождись точного определения координат. До этого игровой экран останется закрыт.</p><button type="button" class="primary" id="gpsGateBtn">Разрешить GPS и войти в игру</button><p class="gps-gate-status" id="gpsGateStatus" aria-live="polite"></p></div>
-</section>
-<script>
-// Report startup failures on the gate instead of leaving a dead-looking button.
-window.addEventListener('error', event => {
-  const status = document.getElementById('gpsGateStatus');
-  if (!status || document.getElementById('gpsGate')?.classList.contains('hidden')) return;
-  const source = event.filename ? ` (${event.filename.split('/').pop()}:${event.lineno || 0})` : '';
-  status.textContent = `Ошибка запуска игры${source}: ${event.message || 'не удалось загрузить скрипт'}. Обнови страницу; если повторится — пришли этот текст.`;
-}, true);
-document.getElementById('gpsGateBtn')?.addEventListener('click', () => {
-  window.setTimeout(() => {
-    if (window.__gameGpsHandlerReady || window.__gameGpsRequestStarted) return;
-    const status = document.getElementById('gpsGateStatus');
-    if (status) status.textContent = 'Игра ещё не загрузила карту и обработчик GPS. Проверь интернет и обнови страницу.';
-  }, 100);
-});
-</script>
+
+
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" onerror="this.onerror=null;this.src='https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js'"></script>
 <script src="./js/game-images.js"></script>
 <script src="./js/number-format.js"></script>
@@ -68,4 +51,5 @@ document.getElementById('gpsGateBtn')?.addEventListener('click', () => {
 <script src="./js/ability-tree.js?v=ability-radial-1"></script>
 <script src="./js/ascension-tree.js?v=ascension-path-2"></script>
 <script type="module" src="./js/firebase-presence.js"></script>
+<script type="module" src="./js/pixel-world/pixel-game-map.js"></script>
 </body></html>
