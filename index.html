@@ -20,7 +20,6 @@
     <div class="stat"><div class="label">⚔️ Урон</div><div class="value" id="atkText">5</div></div>
     <div class="stat"><div class="label">🛡 Защита</div><div class="value" id="defText">0</div></div>
     <div class="stat"><div class="label">🪙 Монеты</div><div class="value" id="coinText">0</div></div>
-    <div class="stat"><div class="label">👣 Пройдено</div><div class="value" id="distanceText">0 м</div></div>
   </div>
 </section>
 <section class="card enemy" id="enemyCard">
@@ -37,7 +36,7 @@
 <section class="card floating-panel hidden merchant-panel" id="merchantPanel"><div class="panel-title"><h2>Дружественный торговец</h2><button type="button" class="secondary panel-close" aria-label="Закрыть торговца">✕</button></div><div class="status" id="merchantDistance"></div><div class="merchant-wallet" id="merchantWallet"></div><h3>Купить</h3><div id="merchantGoods"></div><h3>Продать</h3><div id="merchantSellList"></div></section>
 <footer>Тестовый пиксельный мир использует виртуальные координаты: GPS и реальная ходьба не нужны. Вход через Google и права разработчика Firebase сохранены.</footer>
 </aside>
-<div class="mapwrap pixel-mapwrap"><div id="map" aria-hidden="true"></div><canvas id="pixelGameCanvas" aria-label="Пиксельная карта игры: кликни, чтобы переместиться, или используй WASD и стрелки"></canvas><div class="mapbadge pixel-mapbadge"><b id="mapState">Пиксельный мир</b><br><span id="coords">Клик — идти · WASD — движение</span></div><div class="pixel-map-hint">Клик — идти · WASD / стрелки — двигаться · колёсико — масштаб</div><div class="mapbuttons"><button class="secondary" id="centerBtn">🎯 К персонажу</button></div></div>
+<div class="mapwrap pixel-mapwrap"><div id="map" aria-hidden="true"></div><canvas id="pixelGameCanvas" tabindex="0" aria-label="Пиксельная карта игры: кликни, чтобы переместиться, или используй WASD и стрелки"></canvas><div class="mapbadge pixel-mapbadge"><b id="mapState">Пиксельный мир</b><br><span id="coords">Клик — идти · WASD — движение</span></div><div class="pixel-map-hint">Клик — идти · WASD / стрелки — двигаться · колёсико — масштаб</div><div class="mapbuttons"><button class="secondary" id="centerBtn">🎯 К персонажу</button></div></div>
 </main>
 </div>
 <section class="card floating-panel hidden item-detail-panel" id="itemDetailPanel" aria-live="polite"><div class="panel-title"><h2 id="itemDetailTitle">Предмет</h2><button type="button" class="secondary panel-close" aria-label="Закрыть информацию о предмете">✕</button></div><div class="item-detail-image" id="itemDetailImage">🎒</div><div id="itemImageCredit" class="image-credit"></div><div id="itemDetailRarity"></div><div id="itemDetailBody"></div></section>
