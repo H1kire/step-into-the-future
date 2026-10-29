@@ -1,6 +1,6 @@
-import { PixelWorldRenderer } from "./world-renderer.js";
-import { createCharacterSprite } from "./character-sprites.js";
-import { createMonsterSprite, createNpcSprite } from "./monster-sprites.js";
+import { PixelWorldRenderer } from "./world-renderer.js?v=pixel-polish-2";
+import { createCharacterSprite } from "./character-sprites.js?v=pixel-polish-2";
+import { createMonsterSprite, createNpcSprite } from "./monster-sprites.js?v=pixel-polish-2";
 
 window.PixelSprites = { createCharacterSprite, createMonsterSprite, createNpcSprite };
 
