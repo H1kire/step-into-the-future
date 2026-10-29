@@ -102,3 +102,5 @@ header{position:fixed;inset:0 0 auto;height:calc(58px + env(safe-area-inset-top,
 @media(max-width:780px){.pixel-mapwrap{inset:calc(54px + env(safe-area-inset-top,0px)) 0 0}}
 
 .enemyicon canvas{display:block;max-width:100%;max-height:100%;image-rendering:pixelated;image-rendering:crisp-edges}.pixel-monster-portrait{display:grid;place-items:center}
+
+#pixelGameCanvas:focus-visible{outline:2px solid #c7ed9a;outline-offset:-3px}
