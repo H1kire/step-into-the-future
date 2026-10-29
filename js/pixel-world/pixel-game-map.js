@@ -2,6 +2,8 @@ import { PixelWorldRenderer } from "./world-renderer.js";
 import { createCharacterSprite } from "./character-sprites.js";
 import { createMonsterSprite, createNpcSprite } from "./monster-sprites.js";
 
+window.PixelSprites = { createCharacterSprite, createMonsterSprite, createNpcSprite };
+
 const canvas = document.querySelector("#pixelGameCanvas");
 if (canvas) {
   const world = new PixelWorldRenderer(canvas, {
