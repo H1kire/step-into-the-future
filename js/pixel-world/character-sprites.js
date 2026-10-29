@@ -1,11 +1,11 @@
 import { makePixelCanvas } from "./pixel-sprite.js";
 
 const DEFINITIONS = {
-  adventurer: { name: "Странник", role:"Плащ путешественника, сумка и дорожное снаряжение", cloak:"#667d57", cloakLight:"#9eae76", cloakDark:"#354a3a", trim:"#e5bd65", metal:"#b5b9a4", hood:"#7b9367", hoodLight:"#b0c38b", accessory:"satchel" },
-  warrior: { name: "Воин", role:"Стальная броня, щит и меч", cloak:"#7b8995", cloakLight:"#c7d1d5", cloakDark:"#3e4a5b", trim:"#e3bd68", metal:"#d6e0e3", hood:"#9eafb7", hoodLight:"#e6ece9", accessory:"shield" },
-  archer: { name: "Лучник", role:"Зелёный капюшон, лук и лёгкая броня", cloak:"#426f4d", cloakLight:"#82ad65", cloakDark:"#244b3b", trim:"#c99a54", metal:"#aab99b", hood:"#5c9158", hoodLight:"#a7ca79", accessory:"bow" },
-  mage: { name: "Маг", role:"Мантия, посох и светящийся кристалл", cloak:"#65539a", cloakLight:"#b6a1e8", cloakDark:"#372e65", trim:"#f3d879", metal:"#a6b5dc", hood:"#8570bd", hoodLight:"#d0bdf8", accessory:"staff" },
-  classless: { name: "Без класса", role:"Простая одежда без классовой экипировки", cloak:"#49677c", cloakLight:"#83a5b9", cloakDark:"#2d4355", trim:"#c9c6b4", metal:"#aab8bd", hood:"#63879a", hoodLight:"#a8c7d2", accessory:"none" }
+  adventurer: { name: "Странник", role:"Плащ путешественника, сумка и дорожное снаряжение", cloak:"#4e914b", cloakLight:"#a6e36c", cloakDark:"#244b38", trim:"#f0c85e", metal:"#b9d3a2", hood:"#6fb85b", hoodLight:"#c0f18a", accessory:"satchel" },
+  warrior: { name: "Воин", role:"Стальная броня, щит и меч", cloak:"#526b9d", cloakLight:"#91b8ed", cloakDark:"#27344f", trim:"#ffcc56", metal:"#d9e6ff", hood:"#819bc5", hoodLight:"#d6e6ff", accessory:"shield" },
+  archer: { name: "Лучник", role:"Зелёный капюшон, лук и лёгкая броня", cloak:"#27835c", cloakLight:"#70d69b", cloakDark:"#17483c", trim:"#eab45d", metal:"#b6d5b4", hood:"#31a46b", hoodLight:"#9cf1a9", accessory:"bow" },
+  mage: { name: "Маг", role:"Мантия, посох и светящийся кристалл", cloak:"#7945c2", cloakLight:"#cba0ff", cloakDark:"#3c236e", trim:"#ffe26e", metal:"#a6b9ff", hood:"#9258df", hoodLight:"#e3c4ff", accessory:"staff" },
+  classless: { name: "Без класса", role:"Простая одежда без классовой экипировки", cloak:"#9a7049", cloakLight:"#e6b978", cloakDark:"#543b34", trim:"#f4d28b", metal:"#c9d2c6", hood:"#b58558", hoodLight:"#f3d5a0", accessory:"none" }
 };
 
 function block(ctx, color, x, y, w, h) {
