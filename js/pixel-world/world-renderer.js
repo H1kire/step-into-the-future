@@ -44,28 +44,43 @@ function terrainAt(tx, ty, seed) {
 function drawTile(ctx, tx, ty, seed) {
   const terrain = terrainAt(tx, ty, seed);
   const colors = PALETTE[terrain];
-  const base = colors[Math.floor(hash2(tx, ty, seed + 7) * colors.length)];
-  const x = tx * TILE_SIZE, y = ty * TILE_SIZE;
-  ctx.fillStyle = base; ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
-  // Small clusters of single-pixel color accents make the surface read as pixel art.
   const r = hash2(tx, ty, seed + 19);
-  ctx.fillStyle = colors[(Math.floor(r * 11) + 1) % colors.length];
+  const x = tx * TILE_SIZE, y = ty * TILE_SIZE;
+  const pick = n => colors[Math.floor(hash2(tx * 7 + n, ty * 11 - n, seed + 7) * colors.length)];
+  ctx.fillStyle = pick(1); ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
+  ctx.fillStyle = "rgba(255,255,255,.055)"; ctx.fillRect(x, y, TILE_SIZE, 1); ctx.fillRect(x, y, 1, TILE_SIZE);
+  ctx.fillStyle = "rgba(8,18,22,.12)"; ctx.fillRect(x, y + 15, TILE_SIZE, 1); ctx.fillRect(x + 15, y, 1, TILE_SIZE);
   if (terrain === "grass") {
-    ctx.fillRect(x + 3, y + 4, 2, 1); ctx.fillRect(x + 10, y + 11, 1, 2);
-    if (r > 0.6) { ctx.fillRect(x + 7, y + 2, 1, 1); ctx.fillRect(x + 13, y + 6, 1, 1); }
+    ctx.fillStyle = "#315c3d"; ctx.fillRect(x + 3, y + 11, 3, 2);
+    ctx.fillStyle = "#86a967"; ctx.fillRect(x + 3, y + 4, 3, 1); ctx.fillRect(x + 11, y + 9, 2, 1);
+    ctx.fillStyle = "#a3bd76"; ctx.fillRect(x + 4, y + 3, 1, 1); ctx.fillRect(x + 12, y + 8, 1, 1);
+    ctx.fillStyle = "#3d7146"; ctx.fillRect(x + 8, y + 2, 1, 3); ctx.fillRect(x + 9, y + 4, 2, 1);
+    if (r > .58) { const fx=x+2+Math.floor(r*10)%11, fy=y+3+Math.floor(r*7)%9; ctx.fillStyle=r>.82?"#f1d98a":"#e8e4cb"; ctx.fillRect(fx,fy,1,1); ctx.fillStyle="#4c8b4d"; ctx.fillRect(fx,fy+1,1,2); }
+    if (r < .16) { ctx.fillStyle = "#b2c78a"; ctx.fillRect(x + 12, y + 3, 2, 1); }
   } else if (terrain === "forest") {
-    ctx.fillRect(x + 3, y + 3, 8, 2); ctx.fillRect(x + 5, y + 5, 5, 5);
-    ctx.fillStyle = "#18382f"; ctx.fillRect(x + 7, y + 10, 2, 4);
+    ctx.fillStyle="#163c31";ctx.fillRect(x+2,y+4,12,10);ctx.fillStyle="#24543b";ctx.fillRect(x+3,y+2,10,10);
+    ctx.fillStyle="#347044";ctx.fillRect(x+4,y+3,8,8);ctx.fillStyle="#477f4b";ctx.fillRect(x+5,y+3,5,4);
+    ctx.fillStyle="#6b9856";ctx.fillRect(x+5,y+3,3,2);ctx.fillStyle="#8dad61";ctx.fillRect(x+6,y+3,2,1);
+    ctx.fillStyle="#1b4635";ctx.fillRect(x+9,y+7,3,4);ctx.fillStyle="#2b5b3b";ctx.fillRect(x+4,y+11,8,3);
+    ctx.fillStyle="#6e6040";ctx.fillRect(x+7,y+12,3,3);ctx.fillStyle="#4c4935";ctx.fillRect(x+8,y+12,1,3);
+    if(r>.62){ctx.fillStyle="#9bb96d";ctx.fillRect(x+4,y+6,2,1);}
   } else if (terrain === "water") {
-    ctx.fillRect(x + 2, y + 5, 5, 1); ctx.fillRect(x + 9, y + 11, 4, 1);
-    if (r > 0.7) { ctx.fillStyle = "#7cb4c0"; ctx.fillRect(x + 4, y + 9, 3, 1); }
+    ctx.fillStyle="#24536f";ctx.fillRect(x,y+12,16,4);ctx.fillStyle="#4386a0";ctx.fillRect(x+2,y+3,6,1);ctx.fillRect(x+9,y+8,5,1);
+    ctx.fillStyle="#74b5c4";ctx.fillRect(x+3,y+2,4,1);ctx.fillRect(x+10,y+7,3,1);ctx.fillStyle="#2d6b88";ctx.fillRect(x+1,y+6,3,1);ctx.fillRect(x+7,y+13,5,1);
+    if(r>.7){ctx.fillStyle="#b0d9d9";ctx.fillRect(x+5,y+9,2,1);}
+    if(terrainAt(tx+1,ty,seed)==="sand"){ctx.fillStyle="#d5c18a";ctx.fillRect(x+14,y+1,2,14);}
+    if(terrainAt(tx-1,ty,seed)==="sand"){ctx.fillStyle="#d5c18a";ctx.fillRect(x,y+2,1,12);}
   } else if (terrain === "sand") {
-    ctx.fillRect(x + 4, y + 3, 1, 1); ctx.fillRect(x + 11, y + 9, 2, 1);
+    ctx.fillStyle="#9e804b";ctx.fillRect(x+3,y+5,3,2);ctx.fillRect(x+10,y+11,2,1);ctx.fillStyle="#e0c78c";ctx.fillRect(x+2,y+3,2,1);ctx.fillRect(x+9,y+7,3,1);
+    ctx.fillStyle="#f0dca2";ctx.fillRect(x+3,y+3,1,1);ctx.fillRect(x+10,y+6,1,1);ctx.fillStyle="#b59a60";ctx.fillRect(x+5,y+13,5,1);
+    if(r>.78){ctx.fillStyle="#927747";ctx.fillRect(x+12,y+3,2,2);ctx.fillStyle="#d9bd7c";ctx.fillRect(x+12,y+3,1,1);}
   } else {
-    ctx.fillRect(x + 3, y + 5, 8, 3); ctx.fillStyle = "#515d60"; ctx.fillRect(x + 6, y + 8, 5, 3);
+    ctx.fillStyle="#4d5b5c";ctx.fillRect(x+2,y+7,12,7);ctx.fillStyle="#626f6f";ctx.fillRect(x+4,y+4,9,8);
+    ctx.fillStyle="#89968d";ctx.fillRect(x+5,y+4,6,4);ctx.fillStyle="#b0b8a5";ctx.fillRect(x+6,y+4,3,2);
+    ctx.fillStyle="#77837d";ctx.fillRect(x+3,y+9,4,3);ctx.fillStyle="#3c4b50";ctx.fillRect(x+8,y+10,5,3);
+    ctx.fillStyle="#d3c39a";ctx.fillRect(x+7,y+6,2,1);ctx.fillStyle="#4e5b5c";ctx.fillRect(x+6,y+13,7,1);
   }
 }
-
 export class PixelWorldRenderer {
   constructor(canvas, options = {}) {
     this.canvas = canvas;
@@ -147,14 +162,19 @@ export class PixelWorldRenderer {
       event.preventDefault();
       this.setZoom(this.zoom * (event.deltaY < 0 ? 1.12 : 0.89));
     }, { passive: false });
-    window.addEventListener("keydown", event => {
-      if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "w", "a", "s", "d", "W", "A", "S", "D"].includes(event.key)) {
-        if (!event.target.closest("input,select,textarea,button")) event.preventDefault();
-        this.keys.add(event.key.toLowerCase());
-      }
-    });
-    window.addEventListener("keyup", event => this.keys.delete(event.key.toLowerCase()));
+    this.canvas.tabIndex = 0;
+    this.canvas.addEventListener("pointerdown", () => this.canvas.focus({ preventScroll: true }));
+    const movementKeys = new Set(["arrowup", "arrowdown", "arrowleft", "arrowright", "w", "a", "s", "d"]);
+    const isTypingTarget = target => target instanceof Element && !!target.closest("input,select,textarea,button,[contenteditable='true']");
+    document.addEventListener("keydown", event => {
+      const key = event.key.toLowerCase();
+      if (!movementKeys.has(key) || isTypingTarget(event.target)) return;
+      event.preventDefault();
+      this.keys.add(key);
+    }, true);
+    document.addEventListener("keyup", event => this.keys.delete(event.key.toLowerCase()), true);
     window.addEventListener("blur", () => this.keys.clear());
+    document.addEventListener("visibilitychange", () => { if (document.hidden) this.keys.clear(); });
   }
 
   clampWorld(value) { return Math.max(0, Math.min(this.worldSize - 1, value)); }
@@ -241,15 +261,15 @@ export class PixelWorldRenderer {
       if (!entity.sprite) continue;
       const ex = (entity.x - left) * zoom, ey = (entity.y - top) * zoom;
       if (ex < -40 * zoom || ey < -40 * zoom || ex > width + 40 * zoom || ey > height + 40 * zoom) continue;
-      const ew = (entity.width || 16) * zoom, eh = (entity.height || 20) * zoom;
+      const ew = (entity.sprite.width || entity.width || 16) * zoom, eh = (entity.sprite.height || entity.height || 20) * zoom;
       ctx.fillStyle = "#17211c"; ctx.fillRect(Math.round(ex - 6 * zoom), Math.round(ey + 6 * zoom), Math.ceil(12 * zoom), Math.ceil(3 * zoom));
       ctx.drawImage(entity.sprite, Math.round(ex - ew / 2), Math.round(ey - eh / 2), Math.round(ew), Math.round(eh));
     }
     const px = (this.player.x - left) * zoom, py = (this.player.y - top) * zoom;
     // Hard-edged pixel shadow, sprite and ground-facing highlight.
     ctx.fillStyle = "#17211c"; ctx.fillRect(Math.round(px - 6 * zoom), Math.round(py + 7 * zoom), Math.ceil(12 * zoom), Math.ceil(3 * zoom));
-    const sw = SPRITE_DRAW_SIZE * zoom, sh = SPRITE_DRAW_HEIGHT * zoom;
-    ctx.drawImage(this.sprite, Math.round(px - sw / 2), Math.round(py - sh / 2), Math.round(sw), Math.round(sh));
+    const sw = this.sprite.width * zoom, sh = this.sprite.height * zoom;
+    ctx.drawImage(this.sprite, Math.round(px - sw / 2), Math.round(py - sh * 0.72), Math.round(sw), Math.round(sh));
     if (this.destination) {
       ctx.strokeStyle = "#fff0a3"; ctx.lineWidth = Math.max(1, zoom * 0.7);
       ctx.strokeRect(Math.round((this.destination.x - left) * zoom - 4 * zoom), Math.round((this.destination.y - top) * zoom - 4 * zoom), Math.round(8 * zoom), Math.round(8 * zoom));
@@ -266,5 +286,3 @@ export class PixelWorldRenderer {
   }
 }
 
-const SPRITE_DRAW_SIZE = 16;
-const SPRITE_DRAW_HEIGHT = 20;
