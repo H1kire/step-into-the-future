@@ -73,6 +73,7 @@ export class PixelWorldRenderer {
     this.ctx.imageSmoothingEnabled = false;
     this.seed = options.seed ?? Math.floor(Math.random() * 0x7fffffff);
     this.worldSize = options.worldSize ?? WORLD_SIZE;
+    this.speed = options.speed ?? 180;
     this.onMove = options.onMove ?? null;
     this.onEntityClick = null;
     this.entities = [];
@@ -188,7 +189,7 @@ export class PixelWorldRenderer {
   }
 
   update(dt) {
-    const speed = 180;
+    const speed = this.speed;
     let dx = 0, dy = 0;
     if (this.keys.has("arrowleft") || this.keys.has("a")) dx -= 1;
     if (this.keys.has("arrowright") || this.keys.has("d")) dx += 1;
