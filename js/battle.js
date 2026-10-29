@@ -4,7 +4,7 @@ const SAVE_KEY="gorodskie-stranniki-save-v1",ACTIVE_KEY="gorodskie-stranniki-act
 const $=id=>document.getElementById(id);
 const readSave=()=>{try{return JSON.parse(localStorage.getItem(SAVE_KEY)||"null")||{}}catch{return {}}};
 let save=readSave(),state=save.state||{},monsterId=localStorage.getItem(ACTIVE_KEY),monsters=Array.isArray(save.monsters)?save.monsters:[],enemy=monsters.find(m=>String(m.id)===String(monsterId));
-const statKeys=["attack","defense","dexterity","vitality","wisdom","speed"];
+const statKeys=["attack","dexterity","vitality","wisdom","speed"];
 state.attributes={attack:12,defense:0,dexterity:0,vitality:0,wisdom:0,speed:0,...(state.attributes||{})};
 state.equipment=state.equipment&&typeof state.equipment==="object"?state.equipment:{};
 state.inventory=Array.isArray(state.inventory)?state.inventory:[];
