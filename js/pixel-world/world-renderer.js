@@ -1,4 +1,4 @@
-import { createCharacterSprite } from "./character-sprites.js?v=pixel-atlas-2";
+import { createCharacterSprite } from "./character-sprites.js?v=pixel-atlas-3";
 
 export const WORLD_SIZE = 100_000;
 export const TILE_SIZE = 32;
@@ -104,17 +104,17 @@ export class PixelWorldRenderer {
     this.seed = options.seed ?? Math.floor(Math.random() * 0x7fffffff);
     this.terrainAtlas = new Image();
     this.terrainAtlas.addEventListener("load", () => this.chunkCache.clear());
-    this.terrainAtlas.src = new URL("../../assets/pixel-world/terrain.svg?v=pixel-atlas-2", import.meta.url).href;
+    this.terrainAtlas.src = new URL("../../assets/pixel-world/terrain.svg?v=pixel-atlas-3", import.meta.url).href;
     this.propsAtlas = new Image();
     this.propsAtlas.addEventListener("load", () => this.chunkCache.clear());
-    this.propsAtlas.src = new URL("../../assets/pixel-world/props.svg?v=pixel-atlas-2", import.meta.url).href;
+    this.propsAtlas.src = new URL("../../assets/pixel-world/props.svg?v=pixel-atlas-3", import.meta.url).href;
     this.worldSize = options.worldSize ?? WORLD_SIZE;
     this.speed = options.speed ?? 180;
     this.onMove = options.onMove ?? null;
     this.onEntityClick = null;
     this.entities = [];
     this.camera = { x: this.worldSize / 2, y: this.worldSize / 2 };
-    this.zoom = 1.5;
+    this.zoom = 0.82;
     this.player = { x: this.worldSize / 2, y: this.worldSize / 2 };
     this.character = "adventurer";
     this.visibleChunks = new Set();
@@ -156,7 +156,7 @@ export class PixelWorldRenderer {
     this.onEntityClick = onEntityClick;
   }
 
-  setZoom(value) { this.zoom = Math.max(0.7, Math.min(3.5, Number(value) || 1.5)); }
+  setZoom(value) { this.zoom = Math.max(0.42, Math.min(2.4, Number(value) || 0.82)); }
 
   newSeed() {
     this.seed = Math.floor(Math.random() * 0x7fffffff);
