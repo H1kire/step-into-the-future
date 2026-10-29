@@ -347,7 +347,7 @@ $('attackBtn').addEventListener('click',()=>{
  if(state.hp<=0){handlePlayerDeath();render();return}
  renderEnemy();render();$('combatStatus').textContent='Твой ход.';turn='player';$('attackBtn').disabled=false;},1000);
 });
-$('potionBtn').addEventListener('click',()=>{const maxHp=effectiveMaxHp();if(state.potions<1||state.hp>=maxHp||turn!=='player')return;state.potions--;const heal=Math.min(35,maxHp-state.hp);state.hp+=heal;log(`Зелье восстановило ${formatGameNumber(heal)} HP.`,'good');render()});
+$('potionBtn').addEventListener('click',()=>{const maxHp=effectiveMaxHp();if(state.potions<1||state.hp>=maxHp||turn!=='player')return;state.potions--;const heal=Math.min(Math.ceil(maxHp*.25),maxHp-state.hp);state.hp+=heal;log(`Зелье восстановило ${formatGameNumber(heal)} HP.`,'good');render()});
 $('slashBtn').addEventListener('click',()=>{
  if(!enemy||turn!=='player'||state.energy<15)return;
  const target=enemy,activeCombat=combatId;turn='enemy';if(!state.godMode)state.energy-=15;
