@@ -17,3 +17,6 @@
 .turn-step.complete{border-color:#8b753b;color:#ffe3a0}
 .turn-arrow{color:#62758a;font-size:20px;font-weight:900}
 @media(max-width:520px){.turn-track-wrap{padding:9px 6px}.turn-track{gap:4px}.turn-step{gap:4px;padding:6px 5px;font-size:10px}.turn-step>span{width:18px;height:18px;font-size:10px}.turn-arrow{font-size:13px}.turn-track-title{font-size:9px}}
+
+/* Elite enemy keeps a static, rarity-colored neon aura (no animation). */
+#enemySprite.elite-enemy-sprite{filter:drop-shadow(0 0 5px var(--elite-color)) drop-shadow(0 0 13px var(--elite-color))}
