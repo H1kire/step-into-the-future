@@ -197,7 +197,12 @@ const foes=[
  {name:'Дикий слизень',icon:'🟢',imageKey:'slime',hp:28,atk:6,def:0,xp:25,coins:8},
  {name:'Подворотный гоблин',icon:'👺',imageKey:'goblin',hp:42,atk:9,def:2,xp:38,coins:13},
  {name:'Теневой волк',icon:'🐺',imageKey:'wolf',hp:55,atk:12,def:3,xp:50,coins:18},
- {name:'Малый голем',icon:'🗿',imageKey:'golem',hp:72,atk:14,def:6,xp:65,coins:24}
+ {name:'Малый голем',icon:'🗿',imageKey:'golem',hp:72,atk:14,def:6,xp:65,coins:24},
+ {name:'Скелет-страж',icon:'💀',imageKey:'skeleton',hp:48,atk:11,def:2,xp:44,coins:15},
+ {name:'Пещерная летучая мышь',icon:'🦇',imageKey:'bat',hp:24,atk:8,def:0,xp:28,coins:9},
+ {name:'Грибной страж',icon:'🍄',imageKey:'mushroom',hp:58,atk:12,def:4,xp:52,coins:19},
+ {name:'Дорожный разбойник',icon:'🗡️',imageKey:'bandit',hp:64,atk:15,def:3,xp:62,coins:25},
+ {name:'Светляк-дух',icon:'✨',imageKey:'wisp',hp:78,atk:17,def:5,xp:75,coins:30}
 ];
 function log(msg,kind=''){const p=document.createElement('p');p.textContent=msg;if(kind)p.className=kind;$('log').prepend(p);while($('log').children.length>18)$('log').lastChild.remove();scheduleSave()}
 function render(){
@@ -234,7 +239,7 @@ function spawnEnemy(force=true){
  monster.id=crypto.randomUUID?crypto.randomUUID():String(Date.now()+Math.random());monster.pos=epos;placeMonsterMarker(monster);monsters.push(monster);
  log(`На карте появился противник: ${f.name}. Нажми на него, чтобы начать бой.`,'bad');render();
 }
-function monsterImageKey(monster){if(['slime','goblin','wolf','golem'].includes(monster?.imageKey))return monster.imageKey;const name=String(monster?.name||'').toLowerCase();if(name.includes('гоблин'))return'goblin';if(name.includes('волк'))return'wolf';if(name.includes('голем'))return'golem';return'slime'}
+function monsterImageKey(monster){if(['slime','goblin','wolf','golem','skeleton','bat','mushroom','bandit','wisp'].includes(monster?.imageKey))return monster.imageKey;const name=String(monster?.name||'').toLowerCase();if(name.includes('гоблин'))return'goblin';if(name.includes('волк'))return'wolf';if(name.includes('голем'))return'golem';return'slime'}
 function placeMonsterMarker(monster){monster.marker=L.marker(monster.pos,{icon:enemyIcon}).addTo(map);monster.marker.bindTooltip(`${monster.icon} ${monster.name}`);monster.marker.on('click',e=>{if(e.originalEvent)L.DomEvent.stopPropagation(e.originalEvent);selectEnemy(monster)})}
 function cleanupDistantMonsters(){
  const nearby=[];
