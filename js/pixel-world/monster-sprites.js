@@ -1,8 +1,8 @@
 const VERSION = "pixel-atlas-1";
 const monsterAtlas = new Image();
-monsterAtlas.src = new URL("../../assets/pixel-world/monsters.png?v=" + VERSION, import.meta.url).href;
+monsterAtlas.src = new URL("../../assets/pixel-world/monsters.svg?v=" + VERSION, import.meta.url).href;
 const npcAtlas = new Image();
-npcAtlas.src = new URL("../../assets/pixel-world/npcs.png?v=" + VERSION, import.meta.url).href;
+npcAtlas.src = new URL("../../assets/pixel-world/npcs.svg?v=" + VERSION, import.meta.url).href;
 const MONSTERS = ["slime", "goblin", "wolf", "golem", "skeleton", "bat", "mushroom", "bandit", "wisp"];
 const NPCS = ["merchant", "priest", "blacksmith"];
 const caches = new Map();
@@ -13,7 +13,7 @@ function paint(canvas, kind, npc = false) {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   if (index >= 0 && atlas.complete && atlas.naturalWidth) {
     ctx.imageSmoothingEnabled = false;
-    ctx.drawImage(atlas, index * 64, 0, 64, 64, 0, 0, canvas.width, canvas.height);
+    ctx.drawImage(atlas, index * 32, 0, 32, 32, 0, 0, canvas.width, canvas.height);
   }
 }
 function create(kind, scale, npc = false) {
