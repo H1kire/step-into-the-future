@@ -115,3 +115,10 @@ header{position:fixed;inset:0 0 auto;height:calc(58px + env(safe-area-inset-top,
 #bagPanel .inventory-slot{min-height:54px;aspect-ratio:1}
 @media(min-width:781px){#bagPanel .inventory-slot{min-height:64px}#bagPanel .inventory-slot .item-thumb{width:32px;height:32px;font-size:23px}#bagPanel .slot-index{font-size:9px}#bagPanel .inventory{gap:6px}}
 @media(max-width:780px){#bagPanel .inventory-heading-tools{gap:5px}#bagPanel .inventory-tab{min-width:25px;min-height:25px;padding:3px 6px}#bagPanel .inventory{grid-template-columns:repeat(6,minmax(0,1fr))}}
+
+/* Map quick actions stay grouped at the same fixed location. */
+#centerBtn.center-control,#clearEnemiesBtn.clear-enemies-control{position:fixed;right:12px;z-index:4400;box-shadow:0 5px 18px #0007}
+#centerBtn.center-control{bottom:18px}
+#clearEnemiesBtn.clear-enemies-control{bottom:66px;border-color:#8b5960;background:#38212a;color:#ffe3e6}
+#clearEnemiesBtn.clear-enemies-control:hover{background:#57303a}
+@media(max-width:600px){#centerBtn.center-control,#clearEnemiesBtn.clear-enemies-control{right:8px;min-height:38px;padding:7px 10px;font-size:12px}#centerBtn.center-control{bottom:12px}#clearEnemiesBtn.clear-enemies-control{bottom:58px}}
