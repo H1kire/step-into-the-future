@@ -230,7 +230,7 @@ function spawnEnemy(force=true){
  const f=foes[Math.min(foes.length-1,Math.floor(Math.random()*foes.length))];
  const scale=1+(state.level-1)*.18;
  const monster={...f,level:state.level,maxHp:Math.round(f.hp*scale),hp:Math.round(f.hp*scale),atk:Math.round(f.atk*scale),def:Math.round(f.def*scale),xp:Math.round(f.xp*scale),coins:Math.round(f.coins*scale)};
- const angle=Math.random()*Math.PI*2,meters=Math.random()*100;
+ const angle=Math.random()*Math.PI*2,meters=Math.random()*45;
  const dLat=(meters/111320)*Math.cos(angle),dLng=(meters/(111320*Math.max(.2,Math.cos(pos[0]*Math.PI/180))))*Math.sin(angle);
  const epos=[pos[0]+dLat,pos[1]+dLng];
  monster.id=crypto.randomUUID?crypto.randomUUID():String(Date.now()+Math.random());monster.pos=epos;placeMonsterMarker(monster);monsters.push(monster);
