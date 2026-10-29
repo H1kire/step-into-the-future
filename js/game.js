@@ -2,7 +2,7 @@
 const $ = id => document.getElementById(id);
 // Keep the GPS entry flow usable on browsers that do not implement randomUUID.
 const makePlayerId = () => globalThis.crypto?.randomUUID?.() || `player-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-const map = L.map('map').setView([50.4501,30.5234],15);
+const map = L.map('map').setView([0,0],15);
 const playerIcon=L.divIcon({className:'',html:'<div class="marker youmarker">🧙</div>',iconSize:[42,42],iconAnchor:[21,21]});
 const enemyIcon=L.divIcon({className:'',html:'<div class="marker enemymarker">👾</div>',iconSize:[38,38],iconAnchor:[19,19]});
 const merchantIcon=L.divIcon({className:'',html:'<div class="marker merchantmarker">🧔</div>',iconSize:[40,40],iconAnchor:[20,20]});
@@ -13,7 +13,7 @@ function readSave(){try{return JSON.parse(localStorage.getItem(SAVE_KEY)||'null'
 const savedGame=readSave();
 // Saved coordinates are only a visual hint and can become stale (for example after
 // restoring a backup or moving countries). Never use them as the current GPS fix.
-let pos=[50.4501,30.5234];
+let pos=[0,0];
 map.setView(pos,15);
 let playerMarker=L.marker(pos,{icon:playerIcon}).addTo(map).bindPopup('Ты здесь — Странник');
 let enemyMarker=null, enemy=null, monsters=[],gpsWatch=null, distance=Number.isFinite(savedGame.distance)?savedGame.distance:0,lastPos=null,gpsAllowed=false,gpsPositionReady=false,gpsFixReady=false,gpsInitialCentered=false,lastRealGpsPos=null,lastGpsPos=null,lastGpsAt=0,lastGpsAccuracy=0,gpsCandidate=null,gpsCandidateCount=0,saveTimer=null;
@@ -175,7 +175,7 @@ function openItemDetails(item,equipped=false){
  const panel=$('itemDetailPanel');panel.classList.remove('hidden');panel.style.zIndex='4700';
 }
 function syncPeer(){if(channel&&gpsAllowed&&gpsPositionReady)channel.postMessage({type:'presence',id:playerId,pos,name:'Странник',at:Date.now()})}
-function syncOnline(){if(gpsAllowed&&gpsPositionReady&&lastRealGpsPos)window.dispatchEvent(new CustomEvent('game:position',{detail:{lat:lastRealGpsPos[0],lng:lastRealGpsPos[1],name:'Странник'}}))}
+function syncOnline(){if(gpsAllowed&&gpsPositionReady)window.dispatchEvent(new CustomEvent('game:position',{detail:{lat:pos[0],lng:pos[1],name:'Странник'}}))}
 if(channel)channel.onmessage=e=>{const m=e.data;if(!m||m.id===playerId)return;if(m.type==='presence'){peers[m.id]=m;if(map.distance(pos,m.pos)<=1000){if(!peerMarkers[m.id])peerMarkers[m.id]=L.marker(m.pos,{icon:L.divIcon({className:'',html:'<div class="marker youmarker">🧝</div>',iconSize:[42,42],iconAnchor:[21,21]})}).addTo(map).bindPopup(m.name);else peerMarkers[m.id].setLatLng(m.pos)}else if(peerMarkers[m.id]){map.removeLayer(peerMarkers[m.id]);delete peerMarkers[m.id]}renderChatPeers()}};
 let chatConnected=false,chatFeedback='';
 window.addEventListener('firebase:chat',event=>{const m=event.detail;if(!m||!Number.isFinite(m.lat)||!Number.isFinite(m.lng)||!Number.isFinite(m.createdAt)||Date.now()-m.createdAt>=600000||!m.id||seenChatIds.has(m.id))return;seenChatIds.add(m.id);if(seenChatIds.size>300)seenChatIds.delete(seenChatIds.values().next().value);if(m.uid===window.firebasePlayerUid)addChat(`Ты: ${String(m.text||'').slice(0,180)}`);else if(map.distance(pos,[m.lat,m.lng])<=150)addChat(`${String(m.name||'Игрок').slice(0,24)}: ${String(m.text||'').slice(0,180)}`)});
@@ -387,7 +387,7 @@ document.addEventListener('pointermove',e=>{const scroll=activeInventoryScroll;i
 document.addEventListener('pointerup',e=>{if(activeInventoryScroll?.pointerId===e.pointerId)activeInventoryScroll=null});
 document.addEventListener('pointercancel',e=>{if(activeInventoryScroll?.pointerId===e.pointerId)activeInventoryScroll=null;if(!activeItemDrag)return;if(activeItemDrag.scrollRaf)cancelAnimationFrame(activeItemDrag.scrollRaf);activeItemDrag.ghost?.remove();activeItemDrag.slot.classList.remove('dragging');activeItemDrag=null;$('trashSlot').classList.remove('drop-target');document.querySelectorAll('.drop-target').forEach(el=>el.classList.remove('drop-target'))});
 document.addEventListener('keydown',event=>{if(event.key!=='Enter'&&event.key!==' ')return;const slot=event.target.closest?.('[data-item],[data-equip]');if(!slot)return;const item=slot.dataset.item!==undefined?state.inventory[Number(slot.dataset.item)]:state.equipment[slot.dataset.equip];if(item){event.preventDefault();openItemDetails(item,slot.dataset.equip!==undefined)}});
-const PIXEL_WORLD_SIZE=2400,PIXEL_WORLD_CENTER=PIXEL_WORLD_SIZE/2,PIXEL_ORIGIN_LAT=50.4501,PIXEL_ORIGIN_LNG=30.5234,PIXEL_LAT_METERS=111320,PIXEL_LNG_METERS=111320*Math.cos(PIXEL_ORIGIN_LAT*Math.PI/180);
+const PIXEL_WORLD_SIZE=2400,PIXEL_WORLD_CENTER=PIXEL_WORLD_SIZE/2,PIXEL_ORIGIN_LAT=0,PIXEL_ORIGIN_LNG=0,PIXEL_LAT_METERS=111320,PIXEL_LNG_METERS=111320;
 function latLngToPixel(point){return{x:Math.max(0,Math.min(PIXEL_WORLD_SIZE-1,PIXEL_WORLD_CENTER+(point[1]-PIXEL_ORIGIN_LNG)*PIXEL_LNG_METERS)),y:Math.max(0,Math.min(PIXEL_WORLD_SIZE-1,PIXEL_WORLD_CENTER-(point[0]-PIXEL_ORIGIN_LAT)*PIXEL_LAT_METERS)}}
 function pixelToLatLng(x,y){return{lat:PIXEL_ORIGIN_LAT+(PIXEL_WORLD_CENTER-y)/PIXEL_LAT_METERS,lng:PIXEL_ORIGIN_LNG+(x-PIXEL_WORLD_CENTER)/PIXEL_LNG_METERS}}
 window.GamePixelAPI={getSnapshot(){return{player:latLngToPixel(pos),character:state.ascensionClass||'classless',monsters:monsters.map(monster=>({...latLngToPixel(monster.pos),id:String(monster.id),name:monster.name,imageKey:monsterImageKey(monster)})),merchant:merchantPos?{...latLngToPixel(merchantPos),id:'merchant'}:null,priest:priestPos?{...latLngToPixel(priestPos),id:'priest'}:null}},moveToWorld(x,y){updatePos(pixelToLatLng(x,y),'PIXEL')},selectMonster(id){const monster=monsters.find(item=>String(item.id)===String(id));if(monster)selectEnemy(monster)},selectActor(type){if(type==='merchant')openMerchantShop();if(type==='priest')openPriestPanel()}};
