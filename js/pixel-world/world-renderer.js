@@ -1,4 +1,4 @@
-import { createCharacterSprite } from "./character-sprites.js";
+import { createCharacterSprite } from "./character-sprites.js?v=rotmg-inspired-1";
 
 export const WORLD_SIZE = 100_000;
 export const TILE_SIZE = 16;
