@@ -60,10 +60,7 @@ function drawTile(ctx, tx, ty, seed, atlas) {
     ctx.drawImage(atlas, (index % 4) * 32, Math.floor(index / 4) * 32, 32, 32, x, y, TILE_SIZE, TILE_SIZE);
     return;
   }
-  const terrain = terrainAt(tx, ty, seed);
   const colors = PALETTE[terrain];
-  const r = hash2(tx, ty, seed + 19);
-  const x = tx * TILE_SIZE, y = ty * TILE_SIZE;
   const pick = n => colors[Math.floor(hash2(tx * 7 + n, ty * 11 - n, seed + 7) * colors.length)];
   ctx.fillStyle = pick(1); ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
   ctx.fillStyle = "rgba(255,255,255,.055)"; ctx.fillRect(x, y, TILE_SIZE, 1); ctx.fillRect(x, y, 1, TILE_SIZE);
