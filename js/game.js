@@ -16,7 +16,7 @@ const savedGame=readSave();
 let pos=[0,0];
 map.setView(pos,15);
 let playerMarker=L.marker(pos,{icon:playerIcon}).addTo(map).bindPopup('Ты здесь — Странник');
-let enemyMarker=null, enemy=null, monsters=[],gpsWatch=null, distance=Number.isFinite(savedGame.distance)?savedGame.distance:0,lastPos=null,gpsAllowed=false,gpsPositionReady=false,gpsFixReady=false,gpsInitialCentered=false,lastRealGpsPos=null,lastGpsPos=null,lastGpsAt=0,lastGpsAccuracy=0,gpsCandidate=null,gpsCandidateCount=0,saveTimer=null;
+let enemyMarker=null, enemy=null, monsters=[],gpsWatch=null,gpsAllowed=false,gpsPositionReady=false,gpsFixReady=false,gpsInitialCentered=false,lastRealGpsPos=null,lastGpsPos=null,lastGpsAt=0,lastGpsAccuracy=0,gpsCandidate=null,gpsCandidateCount=0,saveTimer=null;
 let state={level:1,xp:0,hp:100,maxHp:100,coins:0,potions:1,attack:12,defense:0,encounters:0,...(savedGame.state||{})};
 state.godMode=false;
 const legacyAttack=Number.isFinite(state.attack)?state.attack:12,legacyDefense=Number.isFinite(state.defense)?state.defense:0;state.attributes={attack:legacyAttack,defense:legacyDefense,dexterity:0,vitality:0,wisdom:0,speed:0,...(state.attributes||{})};for(const key of ['attack','defense','dexterity','vitality','wisdom','speed'])state.attributes[key]=Number.isFinite(Number(state.attributes[key]))?Number(state.attributes[key]):0;delete state.attack;delete state.defense;
@@ -29,7 +29,7 @@ state.potions=Math.max(0,Math.min(10,Number.isFinite(state.potions)?state.potion
 state.abilityPoints=Number.isFinite(state.abilityPoints)?state.abilityPoints:Math.max(0,state.level-1);state.skillNodes=Array.isArray(state.skillNodes)?state.skillNodes.map(id=>String(id).replace(/^hero-mana-/,'hero-energy-')):[];state.goldTreeNodes=state.goldTreeNodes&&typeof state.goldTreeNodes==='object'&&!Array.isArray(state.goldTreeNodes)?state.goldTreeNodes:{};
 state.ascensionClass=typeof state.ascensionClass==='string'?state.ascensionClass:'';state.ascensionPoints=Number.isFinite(state.ascensionPoints)?state.ascensionPoints:(state.level>=10?1+Math.floor(state.level/25):0);
 const ascensionBranchIds=['warrior','archer','mage'];let savedAscensionPath=Array.isArray(state.ascensionPath)?state.ascensionPath.filter(id=>id==='adventurer'||ascensionBranchIds.includes(id)):[];if(!savedAscensionPath.length&&state.ascensionClass)savedAscensionPath=state.ascensionClass==='adventurer'?['adventurer']:['adventurer',state.ascensionClass];state.ascensionPath=savedAscensionPath[0]==='adventurer'?['adventurer',...savedAscensionPath.slice(1).filter(id=>ascensionBranchIds.includes(id)).slice(0,1)]:[];state.ascensionClass=state.ascensionPath.at(-1)||'';
-function saveGame(){try{const savedState={...state,godMode:false};if(state.godMode){savedState.hp=Math.min(state.hp,state.maxHp*(1+abilityBonus('health')));savedState.energy=Math.min(state.energy,state.maxEnergy*(1+abilityBonus('energy')))}localStorage.setItem(SAVE_KEY,JSON.stringify({state:savedState,distance,pos:lastRealGpsPos,displayPos:pos,realGps:!!lastRealGpsPos,merchantPos,priestPos,log:Array.from($('log').children).map(p=>({text:p.textContent,kind:p.className})),monsters:monsters.map(({marker,...m})=>m)}))}catch{}}
+function saveGame(){try{const savedState={...state,godMode:false};if(state.godMode){savedState.hp=Math.min(state.hp,state.maxHp*(1+abilityBonus('health')));savedState.energy=Math.min(state.energy,state.maxEnergy*(1+abilityBonus('energy')))}localStorage.setItem(SAVE_KEY,JSON.stringify({state:savedState,pos:lastRealGpsPos,displayPos:pos,realGps:!!lastRealGpsPos,merchantPos,priestPos,log:Array.from($('log').children).map(p=>({text:p.textContent,kind:p.className})),monsters:monsters.map(({marker,...m})=>m)}))}catch{}}
 function scheduleSave(){clearTimeout(saveTimer);saveTimer=setTimeout(saveGame,350)}
 let devMode=false,isDeveloper=false,turn='player',lastAttack=0,combatId=0,activeItemDrag=null,activeInventoryScroll=null;
 function setupPanels(){
@@ -209,7 +209,6 @@ function render(){
  $('atkText').textContent=formatGameNumber(totalAttack());$('coinText').textContent=formatGameNumber(state.coins);
  $('defText').textContent=formatGameNumber(effectiveDefense());$('hudEnergyText').textContent=`${formatGameNumber(state.energy)} / ${formatGameNumber(maxEnergy)}`;const resource=resourceName();$('hudEnergyText').closest('.stat').querySelector('.label').textContent=`⚡ ${resource}`;$('energyText').parentElement.firstChild.textContent=`⚡ ${resource}: `;
  const ascensionButton=$('ascensionOpen');if(ascensionButton)ascensionButton.textContent=`✨ Вознесение${state.ascensionPoints?` · ${formatGameNumber(state.ascensionPoints)}`:''}`;
- $('distanceText').textContent=distance<1000?`${formatGameNumber(distance)} м`:`${formatGameNumber(distance/1000)} км`;
  $('energyText')&&($('energyText').textContent=`${formatGameNumber(state.energy)} / ${formatGameNumber(maxEnergy)}`);$('slashBtn').textContent=`⚔️ ${activeSkillName()} (15 ${resource.toLowerCase()})`;
  if($('bagCoins'))$('bagCoins').textContent=`🪙 ${formatGameNumber(state.coins)}`;if($('bagPotions'))$('bagPotions').textContent=`🧪 ${state.potions}/10`;if($('inventoryCapacity'))$('inventoryCapacity').textContent=`${inventoryItemCount()} / ${inventoryCapacity()}`;
  $('potionBtn').textContent=`🧪 Лечиться (${state.potions})`;$('potionBtn').disabled=state.potions<1||state.hp>=maxHp;
@@ -221,8 +220,7 @@ function render(){
 }
 function updatePos(latlng,source='PIXEL'){
  const next=[latlng.lat,latlng.lng];
- if(lastPos&&source==='PIXEL'){const travelled=map.distance(lastPos,next);if(Number.isFinite(travelled)&&travelled<1000)distance+=travelled}
- lastPos=next;pos=next;gpsPositionReady=true;playerMarker.setLatLng(pos);renderChatPeers();cleanupDistantMonsters();updateMerchantForPosition();updatePriestForPosition();
+ pos=next;gpsPositionReady=true;playerMarker.setLatLng(pos);renderChatPeers();cleanupDistantMonsters();updateMerchantForPosition();updatePriestForPosition();
  const pixel=latLngToPixel(pos);$('coords').textContent=`X: ${Math.round(pixel.x)} · Y: ${Math.round(pixel.y)}`;$('mapState').textContent='Свободное перемещение';render();syncPeer();syncOnline();return true
 }
 function spawnEnemy(force=true){
