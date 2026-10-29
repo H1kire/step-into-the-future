@@ -1,4 +1,4 @@
-const VERSION = "pixel-atlas-1";
+const VERSION = "pixel-atlas-2";
 const monsterAtlas = new Image();
 monsterAtlas.src = new URL("../../assets/pixel-world/monsters.svg?v=" + VERSION, import.meta.url).href;
 const npcAtlas = new Image();
@@ -19,7 +19,7 @@ function paint(canvas, kind, npc = false) {
 function create(kind, scale, npc = false) {
   const keys = npc ? NPCS : MONSTERS;
   const safeKind = keys.includes(kind) ? kind : keys[0];
-  const size = Math.max(1, Math.round(32 * scale));
+  const size = Math.max(1, Math.round(40 * scale));
   const canvas = document.createElement("canvas");
   canvas.width = size; canvas.height = size;
   const cacheKey = (npc ? "npc:" : "monster:") + safeKind;
