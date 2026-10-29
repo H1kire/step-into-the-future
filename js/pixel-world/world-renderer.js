@@ -72,9 +72,13 @@ export class PixelWorldRenderer {
     this.ctx = canvas.getContext("2d", { alpha: false });
     this.ctx.imageSmoothingEnabled = false;
     this.seed = options.seed ?? Math.floor(Math.random() * 0x7fffffff);
-    this.camera = { x: WORLD_SIZE / 2, y: WORLD_SIZE / 2 };
+    this.worldSize = options.worldSize ?? WORLD_SIZE;
+    this.onMove = options.onMove ?? null;
+    this.onEntityClick = null;
+    this.entities = [];
+    this.camera = { x: this.worldSize / 2, y: this.worldSize / 2 };
     this.zoom = 1.5;
-    this.player = { x: WORLD_SIZE / 2, y: WORLD_SIZE / 2 };
+    this.player = { x: this.worldSize / 2, y: this.worldSize / 2 };
     this.character = "adventurer";
     this.visibleChunks = new Set();
     this.chunkCache = new Map();
@@ -104,6 +108,17 @@ export class PixelWorldRenderer {
     this.sprite = createCharacterSprite(type);
   }
 
+  setPosition(x, y) {
+    this.player.x = this.clampWorld(Number(x));
+    this.player.y = this.clampWorld(Number(y));
+    this.centerOnPlayer();
+  }
+
+  setEntities(entities, onEntityClick = null) {
+    this.entities = Array.isArray(entities) ? entities : [];
+    this.onEntityClick = onEntityClick;
+  }
+
   setZoom(value) { this.zoom = Math.max(0.7, Math.min(3.5, Number(value) || 1.5)); }
 
   newSeed() {
@@ -118,6 +133,10 @@ export class PixelWorldRenderer {
       const rect = this.canvas.getBoundingClientRect();
       const sx = (event.clientX - rect.left) * this.dpr;
       const sy = (event.clientY - rect.top) * this.dpr;
+      const clickX = this.camera.x + (sx - this.canvas.width / 2) / (this.zoom * this.dpr);
+      const clickY = this.camera.y + (sy - this.canvas.height / 2) / (this.zoom * this.dpr);
+      const target = [...this.entities].reverse().find(entity => Math.abs(entity.x - clickX) <= 13 && Math.abs(entity.y - clickY) <= 15);
+      if (target && this.onEntityClick) { this.onEntityClick(target); return; }
       this.destination = {
         x: this.clampWorld(this.camera.x + (sx - this.canvas.width / 2) / (this.zoom * this.dpr)),
         y: this.clampWorld(this.camera.y + (sy - this.canvas.height / 2) / (this.zoom * this.dpr))
@@ -137,7 +156,7 @@ export class PixelWorldRenderer {
     window.addEventListener("blur", () => this.keys.clear());
   }
 
-  clampWorld(value) { return Math.max(0, Math.min(WORLD_SIZE - 1, value)); }
+  clampWorld(value) { return Math.max(0, Math.min(this.worldSize - 1, value)); }
 
   chunkCanvas(cx, cy) {
     const key = `${cx},${cy},${this.seed}`;
@@ -190,6 +209,7 @@ export class PixelWorldRenderer {
         this.player.y = this.clampWorld(this.player.y + vy / distance * step);
       }
     }
+    if (this.onMove && (dx || dy || this.destination)) this.onMove(this.player.x, this.player.y);
     this.camera.x += (this.player.x - this.camera.x) * Math.min(1, dt * 8);
     this.camera.y += (this.player.y - this.camera.y) * Math.min(1, dt * 8);
   }
@@ -202,7 +222,7 @@ export class PixelWorldRenderer {
     const viewW = width / zoom, viewH = height / zoom;
     const left = this.camera.x - viewW / 2, top = this.camera.y - viewH / 2;
     const minCx = Math.max(0, Math.floor(left / CHUNK_SIZE));
-    const maxCx = Math.min(Math.ceil(WORLD_SIZE / CHUNK_SIZE) - 1, Math.floor((left + viewW) / CHUNK_SIZE));
+    const maxCx = Math.min(Math.ceil(this.worldSize / CHUNK_SIZE) - 1, Math.floor((left + viewW) / CHUNK_SIZE));
     const minCy = Math.max(0, Math.floor(top / CHUNK_SIZE));
     const maxCy = Math.min(Math.ceil(WORLD_SIZE / CHUNK_SIZE) - 1, Math.floor((top + viewH) / CHUNK_SIZE));
     this.visibleChunks.clear();
@@ -215,6 +235,14 @@ export class PixelWorldRenderer {
         const sy = (cy * CHUNK_SIZE - top) * zoom;
         ctx.drawImage(chunk, Math.round(sx), Math.round(sy), Math.ceil(CHUNK_SIZE * zoom), Math.ceil(CHUNK_SIZE * zoom));
       }
+    }
+    for (const entity of this.entities) {
+      if (!entity.sprite) continue;
+      const ex = (entity.x - left) * zoom, ey = (entity.y - top) * zoom;
+      if (ex < -40 * zoom || ey < -40 * zoom || ex > width + 40 * zoom || ey > height + 40 * zoom) continue;
+      const ew = (entity.width || 16) * zoom, eh = (entity.height || 20) * zoom;
+      ctx.fillStyle = "#17211c"; ctx.fillRect(Math.round(ex - 6 * zoom), Math.round(ey + 6 * zoom), Math.ceil(12 * zoom), Math.ceil(3 * zoom));
+      ctx.drawImage(entity.sprite, Math.round(ex - ew / 2), Math.round(ey - eh / 2), Math.round(ew), Math.round(eh));
     }
     const px = (this.player.x - left) * zoom, py = (this.player.y - top) * zoom;
     // Hard-edged pixel shadow, sprite and ground-facing highlight.
