@@ -1,5 +1,5 @@
-import { createCharacterSprite, getCharacterDefinitions } from "./character-sprites.js?v=pixel-polish-2";
-import { PixelWorldRenderer, WORLD_SIZE } from "./world-renderer.js?v=pixel-polish-2";
+import { createCharacterSprite, getCharacterDefinitions } from "./character-sprites.js?v=pixel-polish-3";
+import { PixelWorldRenderer, WORLD_SIZE } from "./world-renderer.js?v=pixel-polish-3";
 
 const gallery = document.querySelector("#characterGallery");
 const selector = document.querySelector("#characterSelect");
