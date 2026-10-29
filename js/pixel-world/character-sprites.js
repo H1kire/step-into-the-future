@@ -1,4 +1,4 @@
-const VERSION = "pixel-atlas-2";
+const VERSION = "pixel-atlas-3";
 const atlas = new Image();
 atlas.src = new URL("../../assets/pixel-world/heroes.svg?v=" + VERSION, import.meta.url).href;
 const spriteCanvases = new Map();
@@ -24,7 +24,7 @@ atlas.addEventListener("load", () => {
 });
 export function createCharacterSprite(type, scale = 1) {
   const key = ORDER.includes(type) ? type : "adventurer";
-  const size = Math.max(1, Math.round(40 * scale));
+  const size = Math.max(1, Math.round(56 * scale));
   const canvas = document.createElement("canvas");
   canvas.width = size; canvas.height = size;
   if (!spriteCanvases.has(key)) spriteCanvases.set(key, new Set());
