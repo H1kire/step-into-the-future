@@ -1,6 +1,6 @@
-const VERSION = "pixel-atlas-3";
+const VERSION = "pixel-atlas-4";
 const atlas = new Image();
-atlas.src = new URL("../../assets/pixel-world/heroes.svg?v=" + VERSION, import.meta.url).href;
+atlas.src = new URL("../../assets/pixel-world/heroes-atlas.svg?v=" + VERSION, import.meta.url).href;
 const spriteCanvases = new Map();
 const ORDER = ["adventurer", "warrior", "archer", "mage", "classless"];
 const DEFINITIONS = {
@@ -16,7 +16,7 @@ function paint(type, canvas) {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   if (atlas.complete && atlas.naturalWidth) {
     ctx.imageSmoothingEnabled = false;
-    ctx.drawImage(atlas, index * 32, 0, 32, 32, 0, 0, canvas.width, canvas.height);
+    ctx.drawImage(atlas, index * 64, 0, 64, 64, 0, 0, canvas.width, canvas.height);
   }
 }
 atlas.addEventListener("load", () => {
