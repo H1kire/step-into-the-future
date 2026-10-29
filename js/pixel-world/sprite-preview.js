@@ -15,11 +15,16 @@ for (const character of getCharacterDefinitions()) {
   const stage = document.createElement("div");
   stage.className = "sprite-stage";
   const sprite = createCharacterSprite(character.id);
+  // Override the canvas's native 16×20 CSS size for a crisp enlarged preview.
+  sprite.style.width = "96px";
+  sprite.style.height = "120px";
   sprite.setAttribute("role", "img");
   sprite.setAttribute("aria-label", character.name);
   stage.append(sprite);
-  const title = document.createElement("h3"); title.textContent = character.name;
-  const description = document.createElement("p"); description.textContent = character.role;
+  const title = document.createElement("h3");
+  title.textContent = character.name;
+  const description = document.createElement("p");
+  description.textContent = character.role;
   card.append(stage, title, description);
   gallery.append(card);
 }
@@ -31,7 +36,8 @@ selector.addEventListener("change", () => world.setCharacter(selector.value));
 zoomSelector.addEventListener("change", () => world.setZoom(zoomSelector.value));
 document.querySelector("#centerWorld").addEventListener("click", () => world.centerOnPlayer());
 document.querySelector("#regenWorld").addEventListener("click", () => {
-  world.newSeed(); seedLabel.textContent = `Seed: ${world.seed}`;
+  world.newSeed();
+  seedLabel.textContent = `Seed: ${world.seed}`;
 });
 function updateReadout() {
   const x = Number(canvas.dataset.worldX || WORLD_SIZE / 2);
