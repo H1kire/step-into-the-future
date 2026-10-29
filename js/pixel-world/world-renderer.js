@@ -1,4 +1,4 @@
-import { createCharacterSprite } from "./character-sprites.js?v=pixel-atlas-1";
+import { createCharacterSprite } from "./character-sprites.js?v=pixel-atlas-2";
 
 export const WORLD_SIZE = 100_000;
 export const TILE_SIZE = 32;
@@ -104,7 +104,10 @@ export class PixelWorldRenderer {
     this.seed = options.seed ?? Math.floor(Math.random() * 0x7fffffff);
     this.terrainAtlas = new Image();
     this.terrainAtlas.addEventListener("load", () => this.chunkCache.clear());
-    this.terrainAtlas.src = new URL("../../assets/pixel-world/terrain.svg?v=pixel-atlas-1", import.meta.url).href;
+    this.terrainAtlas.src = new URL("../../assets/pixel-world/terrain.svg?v=pixel-atlas-2", import.meta.url).href;
+    this.propsAtlas = new Image();
+    this.propsAtlas.addEventListener("load", () => this.chunkCache.clear());
+    this.propsAtlas.src = new URL("../../assets/pixel-world/props.svg?v=pixel-atlas-2", import.meta.url).href;
     this.worldSize = options.worldSize ?? WORLD_SIZE;
     this.speed = options.speed ?? 180;
     this.onMove = options.onMove ?? null;
@@ -210,7 +213,28 @@ export class PixelWorldRenderer {
     ctx.imageSmoothingEnabled = false;
     for (let ty = 0; ty < CHUNK_TILES; ty++) {
       for (let tx = 0; tx < CHUNK_TILES; tx++) {
-        drawTile(ctx, cx * CHUNK_TILES + tx, cy * CHUNK_TILES + ty, this.seed, this.terrainAtlas);
+        const wx = cx * CHUNK_TILES + tx, wy = cy * CHUNK_TILES + ty;
+        drawTile(ctx, wx, wy, this.seed, this.terrainAtlas);
+      }
+    }
+    if (this.propsAtlas.complete && this.propsAtlas.naturalWidth) {
+      for (let ty = 0; ty < CHUNK_TILES; ty++) {
+        for (let tx = 0; tx < CHUNK_TILES; tx++) {
+          const wx = cx * CHUNK_TILES + tx, wy = cy * CHUNK_TILES + ty;
+          const terrain = terrainAt(wx, wy, this.seed);
+          const roll = hash2(wx, wy, this.seed + 901);
+          if (terrain === "water") continue;
+          let prop = -1;
+          if ((terrain === "grass" || terrain === "forest") && roll > 0.91) prop = roll > 0.985 ? 0 : (roll > 0.96 ? 1 : 2);
+          else if (terrain === "grass" && roll > 0.78) prop = roll > 0.88 ? 4 : 6;
+          else if (terrain === "sand" && roll > 0.97) prop = 8;
+          else if (terrain === "stone" && roll > 0.76) prop = 8;
+          else if (terrain === "forest" && roll > 0.78) prop = roll > 0.87 ? 9 : 3;
+          if (prop >= 0) {
+            const px = wx * TILE_SIZE, py = wy * TILE_SIZE;
+            ctx.drawImage(this.propsAtlas, prop * 32, 0, 32, 32, px, py - 2, TILE_SIZE, TILE_SIZE + 2);
+          }
+        }
       }
     }
     this.chunkCache.set(key, canvas);
