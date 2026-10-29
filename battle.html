@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Бой · Городские странники</title>
+<link rel="stylesheet" href="./css/battle.css?v=battle-1">
+</head>
+<body>
+<header class="battle-top"><a class="exit" id="exitBattle" href="./index.html">← Выйти из боя</a><div class="battle-title">⚔️ СРАЖЕНИЕ</div><div class="top-level" id="playerLevelTop">Уровень 1</div></header>
+<main class="arena">
+<section class="fighter player-fighter">
+  <div class="fighter-label">ТВОЙ ГЕРОЙ</div><div class="sprite-stage player-stage"><div id="playerSprite" class="sprite"></div></div>
+  <h2 id="playerName">Странник</h2><div class="level-label" id="playerLevel">Уровень 1</div>
+  <div class="bar-label"><span>❤️ Здоровье</span><b id="playerHpText">100 / 100</b></div><div class="bar"><i id="playerHpBar"></i></div>
+  <div class="bar-label"><span>⚡ Энергия</span><b id="playerEnergyText">50 / 50</b></div><div class="bar energy"><i id="playerEnergyBar"></i></div>
+  <div class="battle-stats"><span>⚔️ <b id="playerAttack">5</b></span><span>🛡 <b id="playerDefense">0</b></span></div>
+</section>
+<div class="versus">VS</div>
+<section class="fighter enemy-fighter">
+  <div class="fighter-label enemy-label">ПРОТИВНИК</div><div class="sprite-stage enemy-stage"><div id="enemySprite" class="sprite"></div></div>
+  <h2 id="enemyName">Враг</h2><div class="level-label" id="enemyLevel">Уровень 1</div>
+  <div class="bar-label"><span>❤️ Здоровье</span><b id="enemyHpText">30 / 30</b></div><div class="bar"><i id="enemyHpBar"></i></div>
+  <div class="bar-label"><span>⚔️ Урон</span><b id="enemyAttack">5</b></div>
+  <div class="bar-label"><span>🛡 Защита</span><b id="enemyDefense">0</b></div>
+</section>
+</main>
+<section class="combat-console">
+  <div id="combatMessage" class="combat-message" aria-live="polite">Твой ход. Выбери действие.</div>
+  <div class="combat-actions">
+    <button id="basicAttack" class="action-button attack">⚔️ Обычная атака</button>
+    <button id="abilityAttack" class="action-button ability">✨ <span id="abilityName">Особая атака</span><small id="abilityCost">15 энергии</small></button>
+    <button id="usePotion" class="action-button potion">🧪 Зелье здоровья <small id="potionCount">1 осталось</small></button>
+  </div>
+  <div class="battle-log" id="battleLog"></div>
+  <div class="reward-note" id="rewardNote" hidden></div>
+  <button id="returnAfterFight" class="action-button return" hidden>Вернуться на карту</button>
+</section>
+<script type="module" src="./js/battle.js?v=battle-1"></script>
+</body></html>
