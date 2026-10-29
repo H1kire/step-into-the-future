@@ -41,3 +41,19 @@ export function createMonsterSprite(kind, scale = 1) {
 export function getMonsterDefinitions() {
   return Object.entries(DEFINITIONS).map(([id, def]) => ({ id, name: def.name, width: def.width, height: def.height }));
 }
+
+export function createNpcSprite(kind, scale = 1) {
+  const { canvas, ctx } = makePixelCanvas(16, 20, scale);
+  const palettes = {
+    merchant: { k:"#252b35", s:"#f1c49a", S:"#b77752", b:"#6a432e", B:"#3f2c29", g:"#d8bd78", G:"#92713b", e:"#fff0ce" },
+    priest: { k:"#252b35", s:"#f1c49a", S:"#b77752", p:"#b9a0e8", P:"#70539b", h:"#f4d878", H:"#b18a35", e:"#fff0ce" }
+  };
+  const p = palettes[kind] || palettes.merchant;
+  const rows = kind === "priest"
+    ? [".......h........","......hhh.......",".....hhhhh......",".....ssssss.....",".....skkks......",".....ssssss.....","....PPPPPPPP....","...PPPPPPPPPP...","...PPPPPPPPPP...","...PPPPPPPPPP...","....PPPPPPPP....","....PPPPPPPP....","....PPPPPPPP....","....PPPPPPPP....","...kk......kk...","...kk......kk...","...kk......kk...","...kk......kk...","..kkk......kkk..","................"]
+    : ["......bbbb......",".....bssssb.....",".....sseess.....",".....sseess.....","......ssss......",".....kkkkkk.....","....kkggggkk....","....kggggggk....","....kkkkkkkk....",".....bBBBBb.....","....bb....bb....","....bb....bb....","....bb....bb....","....bb....bb....","....bb....bb....","....bb....bb....","...bb......bb...","...bb......bb...","...BB......BB...","................"];
+  pixels(ctx, rows, p);
+  ctx.fillStyle = p.e;
+  ctx.fillRect(6, 6, 1, 1); ctx.fillRect(9, 6, 1, 1);
+  return canvas;
+}
