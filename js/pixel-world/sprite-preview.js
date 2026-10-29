@@ -1,6 +1,6 @@
-import { createCharacterSprite, getCharacterDefinitions } from "./character-sprites.js?v=pixel-atlas-3";
-import { createMonsterSprite, createNpcSprite, getMonsterDefinitions } from "./monster-sprites.js?v=pixel-atlas-3";
-import { PixelWorldRenderer, WORLD_SIZE } from "./world-renderer.js?v=pixel-atlas-3";
+import { createCharacterSprite, getCharacterDefinitions } from "./character-sprites.js?v=pixel-atlas-4";
+import { createMonsterSprite, createNpcSprite, getMonsterDefinitions } from "./monster-sprites.js?v=pixel-atlas-4";
+import { PixelWorldRenderer, WORLD_SIZE } from "./world-renderer.js?v=pixel-atlas-4";
 
 function addSpriteCard(container, name, description, sprite, kind = "character") {
   const card = document.createElement("article");
