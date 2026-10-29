@@ -1,6 +1,6 @@
-import { PixelWorldRenderer } from "./world-renderer.js?v=pixel-atlas-3";
-import { createCharacterSprite } from "./character-sprites.js?v=pixel-atlas-3";
-import { createMonsterSprite, createNpcSprite } from "./monster-sprites.js?v=pixel-atlas-3";
+import { PixelWorldRenderer } from "./world-renderer.js?v=pixel-atlas-4";
+import { createCharacterSprite } from "./character-sprites.js?v=pixel-atlas-4";
+import { createMonsterSprite, createNpcSprite } from "./monster-sprites.js?v=pixel-atlas-4";
 
 window.PixelSprites = { createCharacterSprite, createMonsterSprite, createNpcSprite };
 
