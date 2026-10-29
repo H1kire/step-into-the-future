@@ -1,4 +1,4 @@
-import { createCharacterSprite } from "./character-sprites.js?v=pixel-atlas-3";
+import { createCharacterSprite } from "./character-sprites.js?v=pixel-atlas-4";
 
 export const WORLD_SIZE = 100_000;
 export const TILE_SIZE = 32;
@@ -104,10 +104,10 @@ export class PixelWorldRenderer {
     this.seed = options.seed ?? Math.floor(Math.random() * 0x7fffffff);
     this.terrainAtlas = new Image();
     this.terrainAtlas.addEventListener("load", () => this.chunkCache.clear());
-    this.terrainAtlas.src = new URL("../../assets/pixel-world/terrain.svg?v=pixel-atlas-3", import.meta.url).href;
+    this.terrainAtlas.src = new URL("../../assets/pixel-world/terrain.svg?v=pixel-atlas-4", import.meta.url).href;
     this.propsAtlas = new Image();
     this.propsAtlas.addEventListener("load", () => this.chunkCache.clear());
-    this.propsAtlas.src = new URL("../../assets/pixel-world/props.svg?v=pixel-atlas-3", import.meta.url).href;
+    this.propsAtlas.src = new URL("../../assets/pixel-world/props.svg?v=pixel-atlas-4", import.meta.url).href;
     this.worldSize = options.worldSize ?? WORLD_SIZE;
     this.speed = options.speed ?? 180;
     this.onMove = options.onMove ?? null;
