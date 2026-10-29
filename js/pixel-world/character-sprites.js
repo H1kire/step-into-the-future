@@ -1,11 +1,11 @@
 import { makePixelCanvas } from "./pixel-sprite.js";
 
 const DEFINITIONS = {
-  adventurer: { name: "Странник", cloak:"#667d57", cloakLight:"#9eae76", cloakDark:"#354a3a", trim:"#e5bd65", metal:"#b5b9a4", hood:"#7b9367", hoodLight:"#b0c38b", accessory:"satchel" },
-  warrior: { name: "Воин", cloak:"#7b8995", cloakLight:"#c7d1d5", cloakDark:"#3e4a5b", trim:"#e3bd68", metal:"#d6e0e3", hood:"#9eafb7", hoodLight:"#e6ece9", accessory:"shield" },
-  archer: { name: "Лучник", cloak:"#426f4d", cloakLight:"#82ad65", cloakDark:"#244b3b", trim:"#c99a54", metal:"#aab99b", hood:"#5c9158", hoodLight:"#a7ca79", accessory:"bow" },
-  mage: { name: "Маг", cloak:"#65539a", cloakLight:"#b6a1e8", cloakDark:"#372e65", trim:"#f3d879", metal:"#a6b5dc", hood:"#8570bd", hoodLight:"#d0bdf8", accessory:"staff" },
-  classless: { name: "Без класса", cloak:"#49677c", cloakLight:"#83a5b9", cloakDark:"#2d4355", trim:"#c9c6b4", metal:"#aab8bd", hood:"#63879a", hoodLight:"#a8c7d2", accessory:"none" }
+  adventurer: { name: "Странник", role:"Плащ путешественника, сумка и дорожное снаряжение", cloak:"#667d57", cloakLight:"#9eae76", cloakDark:"#354a3a", trim:"#e5bd65", metal:"#b5b9a4", hood:"#7b9367", hoodLight:"#b0c38b", accessory:"satchel" },
+  warrior: { name: "Воин", role:"Стальная броня, щит и меч", cloak:"#7b8995", cloakLight:"#c7d1d5", cloakDark:"#3e4a5b", trim:"#e3bd68", metal:"#d6e0e3", hood:"#9eafb7", hoodLight:"#e6ece9", accessory:"shield" },
+  archer: { name: "Лучник", role:"Зелёный капюшон, лук и лёгкая броня", cloak:"#426f4d", cloakLight:"#82ad65", cloakDark:"#244b3b", trim:"#c99a54", metal:"#aab99b", hood:"#5c9158", hoodLight:"#a7ca79", accessory:"bow" },
+  mage: { name: "Маг", role:"Мантия, посох и светящийся кристалл", cloak:"#65539a", cloakLight:"#b6a1e8", cloakDark:"#372e65", trim:"#f3d879", metal:"#a6b5dc", hood:"#8570bd", hoodLight:"#d0bdf8", accessory:"staff" },
+  classless: { name: "Без класса", role:"Простая одежда без классовой экипировки", cloak:"#49677c", cloakLight:"#83a5b9", cloakDark:"#2d4355", trim:"#c9c6b4", metal:"#aab8bd", hood:"#63879a", hoodLight:"#a8c7d2", accessory:"none" }
 };
 
 function block(ctx, color, x, y, w, h) {
