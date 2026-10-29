@@ -263,7 +263,7 @@ export class PixelWorldRenderer {
       if (ex < -40 * zoom || ey < -40 * zoom || ex > width + 40 * zoom || ey > height + 40 * zoom) continue;
       const ew = (entity.sprite.width || entity.width || 16) * zoom, eh = (entity.sprite.height || entity.height || 20) * zoom;
       ctx.fillStyle = "#17211c"; ctx.fillRect(Math.round(ex - 6 * zoom), Math.round(ey + 6 * zoom), Math.ceil(12 * zoom), Math.ceil(3 * zoom));
-      ctx.drawImage(entity.sprite, Math.round(ex - ew / 2), Math.round(ey - eh / 2), Math.round(ew), Math.round(eh));
+      ctx.drawImage(entity.sprite, Math.round(ex - ew / 2), Math.round(ey - eh * 0.72), Math.round(ew), Math.round(eh));
     }
     const px = (this.player.x - left) * zoom, py = (this.player.y - top) * zoom;
     // Hard-edged pixel shadow, sprite and ground-facing highlight.
