@@ -7,7 +7,7 @@ import { firebaseConfig, appCheckSiteKey, developerUid } from './firebase-config
 
 const onlineStatus = document.getElementById('onlineStatus');
 let lastPosition = null, lastSentAt = 0, currentPlayerRef = null, unsubscribePlayers = null, unsubscribeProfile = null, unsubscribeChat = null, chatCleanupTimer = null, cleanupRunning = false, chatName = 'Странник', lastChatSentAt = 0;
-let cloudUid = null, cloudReady = false, pendingCloudSave = null, cloudSaveTimer = null, lastCloudWriteAt = 0;
+let cloudUid = null, cloudReady = false, pendingCloudSave = null, cloudSaveTimer = null, cloudSaveInterval = null, lastCloudWriteAt = 0;
 const app = initializeApp(firebaseConfig);
 if (appCheckSiteKey) initializeAppCheck(app, { provider: new ReCaptchaV3Provider(appCheckSiteKey), isTokenAutoRefreshEnabled: true });
 const auth = getAuth(app);
@@ -52,14 +52,14 @@ function publishPosition() {
   if (wait > 0) { setTimeout(publishPosition, wait); return; }
   lastSentAt = Date.now();
   set(currentPlayerRef, { ...lastPosition, updatedAt: Date.now() })
-    .catch(error => { if (onlineStatus) onlineStatus.textContent = 'Онлайн: ошибка записи'; console.error('Firebase presence write failed', error); });
+    .catch(error => { if (onlineStatus) if (onlineStatus) onlineStatus.textContent = 'Онлайн: ошибка записи'; console.error('Firebase presence write failed', error); });
 }
 setInterval(() => { if (!document.hidden) publishPosition(); }, 10000);
 document.addEventListener('visibilitychange', () => { if (!document.hidden) publishPosition(); });
 
 function dispatchAccount(user, profile) {
   if (!user || user.isAnonymous) {
-    cloudUid = null; cloudReady = false; pendingCloudSave = null; if (cloudSaveTimer) { clearTimeout(cloudSaveTimer); clearInterval(cloudSaveTimer); cloudSaveTimer = null; }
+    cloudUid = null; cloudReady = false; pendingCloudSave = null; if (cloudSaveTimer) clearTimeout(cloudSaveTimer); if (cloudSaveInterval) clearInterval(cloudSaveInterval); cloudSaveTimer = null; cloudSaveInterval = null;
     window.dispatchEvent(new CustomEvent('firebase:auth', { detail: { uid: '', profile: null } }));
     return;
   }
@@ -172,8 +172,9 @@ onAuthStateChanged(auth, async user => {
         }
         cloudReady = true;
         if (pendingCloudSave) queueCloudSave(pendingCloudSave, !cloudSnapshot.exists());
-        if (cloudSaveTimer) clearInterval(cloudSaveTimer);
-        cloudSaveTimer = setInterval(flushCloudSave, 60000);
+        if (cloudSaveTimer) clearTimeout(cloudSaveTimer);
+        if (cloudSaveInterval) clearInterval(cloudSaveInterval);
+        cloudSaveInterval = setInterval(flushCloudSave, 60000);
       } catch (error) {
         cloudReady = false;
         if (onlineStatus) onlineStatus.textContent = 'Облако: ошибка загрузки';
