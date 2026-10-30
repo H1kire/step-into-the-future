@@ -1,4 +1,4 @@
-import { createCharacterSprite } from "./character-sprites.js?v=pixel-atlas-6";
+import { createCharacterSprite } from "./character-sprites.js?v=pixel-atlas-7";
 
 export const WORLD_SIZE = 100_000;
 export const TILE_SIZE = 32;
@@ -104,17 +104,25 @@ export class PixelWorldRenderer {
     this.seed = options.seed ?? Math.floor(Math.random() * 0x7fffffff);
     this.terrainAtlas = new Image();
     this.terrainAtlas.addEventListener("load", () => this.chunkCache.clear());
-    this.terrainAtlas.src = new URL("../../assets/pixel-world/terrain.svg?v=pixel-atlas-6", import.meta.url).href;
+    this.terrainAtlas.src = new URL("../../assets/pixel-world/terrain.svg?v=pixel-atlas-7", import.meta.url).href;
     this.propsAtlas = new Image();
     this.propsAtlas.addEventListener("load", () => this.chunkCache.clear());
-    this.propsAtlas.src = new URL("../../assets/pixel-world/props.svg?v=pixel-atlas-6", import.meta.url).href;
+    this.propsAtlas.src = new URL("../../assets/pixel-world/props.svg?v=pixel-atlas-7", import.meta.url).href;
     this.worldSize = options.worldSize ?? WORLD_SIZE;
     this.speed = options.speed ?? 180;
     this.onMove = options.onMove ?? null;
     this.onEntityClick = null;
     this.entities = [];
     this.camera = { x: this.worldSize / 2, y: this.worldSize / 2 };
-    this.zoom = 0.82;
+    // Keep the player's chosen camera distance across reloads, including cloud-save reloads.
+    let savedZoom = null;
+    try {
+      const storedZoom = localStorage.getItem("pixel-world-camera-zoom-v1");
+      if (storedZoom !== null) savedZoom = Number(storedZoom);
+    } catch {}
+    this.zoom = Number.isFinite(savedZoom) && savedZoom > 0
+      ? Math.max(0.42, Math.min(2.4, savedZoom))
+      : 0.82;
     this.player = { x: this.worldSize / 2, y: this.worldSize / 2 };
     this.character = "adventurer";
     this.visibleChunkCount = 0;
@@ -166,7 +174,10 @@ export class PixelWorldRenderer {
     this.onEntityClick = onEntityClick;
   }
 
-  setZoom(value) { this.zoom = Math.max(0.42, Math.min(2.4, Number(value) || 0.82)); }
+  setZoom(value) {
+    this.zoom = Math.max(0.42, Math.min(2.4, Number(value) || 0.82));
+    try { localStorage.setItem("pixel-world-camera-zoom-v1", String(this.zoom)); } catch {}
+  }
 
   newSeed() {
     this.seed = Math.floor(Math.random() * 0x7fffffff);
