@@ -129,6 +129,7 @@ function effectiveDefense(){if(state.godMode)return 1000000;return totalAttribut
 function criticalChance(){return Math.min(1,.01+totalAttributes().speed*.005/100)}
 function rollPlayerDamage(multiplier=1){const critical=Math.random()<criticalChance();return{damage:Math.max(1,totalAttack()*multiplier*(critical?2:1)),critical}}
 function rarityRoll(){let tier=0;const quality=1+abilityBonus('rarity')+goldTreeBonus('rarity');if(Math.random()<Math.min(.95,.5*quality))tier=1;if(tier>=1&&Math.random()<Math.min(.95,.5*quality))tier=2;if(tier>=2&&Math.random()<Math.min(.95,.5*quality))tier=3;if(tier>=3&&Math.random()<Math.min(.95,.4*quality))tier=4;return rarities[tier]}
+function eliteRarityRoll(){const quality=1+abilityBonus('rarity')+goldTreeBonus('rarity'),a=Math.min(.95,.5*quality),b=Math.min(.95,.4*quality),weights=[1-a,a*(1-a),a*a*(1-a),a*a*a*(1-b),a*a*a*b];weights[0]*=2;weights[1]*=2;const total=weights.reduce((sum,value)=>sum+value,0);let roll=Math.random()*total;for(let tier=0;tier<weights.length;tier++){roll-=weights[tier];if(roll<0)return rarities[tier]}return rarities[0]}
 const gearPrefixes=['Северный','Кованый','Лунный','Забытый','Грозовой','Рунный','Странника','Кровавый','Сумрачный','Звёздный'],gearSuffixes=['предела','рассвета','дозора','бури','истока'],gearClasses=['warrior','archer','mage'];
 const gearTemplates=gearClasses.flatMap(classId=>gearSlots.flatMap(type=>Array.from({length:50},(_,index)=>({classId,type,variant:index+1,requiredLevel:Math.max(1,Math.ceil((index+1)/5))}))));
 const rarityPower={common:1,uncommon:1.4,rare:1.8,epic:2.3,legendary:3};
@@ -234,7 +235,7 @@ function updatePos(latlng,source='PIXEL'){
 }
 function rollMonsterLevel(){const max=Math.max(1,Math.floor(state.level));const roll=Math.random();const offset=roll<.6?3+Math.floor(Math.random()*5):roll<.85?8+Math.floor(Math.random()*8):Math.floor(Math.random()*3);return Math.max(1,max-offset)}
 function spawnEnemy(force=true){
- if(monsters.length>=25){if(force)log('На карте уже максимальное число врагов (25).');return;}
+ if(monsters.length>=60){if(force)log('На карте уже максимальное число врагов (60).');return;}
  const f=foes[Math.min(foes.length-1,Math.floor(Math.random()*foes.length))];
  const level=rollMonsterLevel(),scale=1+Math.pow(Math.max(0,level-1),.82)*.12;
  const monster={...f,level,maxHp:Math.round(f.hp*scale*5.5*11),hp:Math.round(f.hp*scale*5.5*11),atk:Math.round(f.atk*(1+Math.pow(Math.max(0,level-1),.78)*.09)*5.5*11),def:Math.round(f.def*(1+Math.pow(Math.max(0,level-1),.72)*.08)*5.5*11),xp:Math.round((30+f.xp*.7)*Math.pow(level,.72)),coins:Math.round((5+f.coins*.7)*Math.pow(level,.58)),balanceVersion:3};
@@ -242,7 +243,7 @@ function spawnEnemy(force=true){
  const angle=Math.random()*Math.PI*2,meters=Math.random()*45;
  const dLat=(meters/111320)*Math.cos(angle),dLng=(meters/(111320*Math.max(.2,Math.cos(pos[0]*Math.PI/180))))*Math.sin(angle);
  const epos=[pos[0]+dLat,pos[1]+dLng];
- const eliteChance=Math.min(1,.05*(1+abilityBonus('drop')+goldTreeBonus('drop')));if(Math.random()<eliteChance){const [eliteRarity,eliteKey]=rarityRoll(),eliteTier=Math.max(0,rarities.findIndex(r=>r[1]===eliteKey));const difficultyMultiplier=5*(eliteTier+1),rewardMultiplier=2*(eliteTier+1);monster.elite=true;monster.eliteRarity=eliteRarity;monster.eliteKey=eliteKey;monster.eliteTier=eliteTier;monster.eliteDifficultyMultiplier=difficultyMultiplier;monster.eliteRewardMultiplier=rewardMultiplier;monster.name='Элитный '+monster.name;monster.maxHp=Math.round(monster.maxHp*difficultyMultiplier);monster.hp=monster.maxHp;monster.atk=Math.round(monster.atk*difficultyMultiplier);monster.def=Math.round(monster.def*difficultyMultiplier);monster.xp=Math.round(monster.xp*rewardMultiplier);monster.coins=Math.round(monster.coins*rewardMultiplier)}
+ const eliteChance=Math.min(1,.05*(1+abilityBonus('drop')+goldTreeBonus('drop')));if(Math.random()<eliteChance){const [eliteRarity,eliteKey]=eliteRarityRoll(),eliteTier=Math.max(0,rarities.findIndex(r=>r[1]===eliteKey));const difficultyMultiplier=5*(eliteTier+1),rewardMultiplier=2*(eliteTier+1);monster.elite=true;monster.eliteRarity=eliteRarity;monster.eliteKey=eliteKey;monster.eliteTier=eliteTier;monster.eliteDifficultyMultiplier=difficultyMultiplier;monster.eliteRewardMultiplier=rewardMultiplier;monster.name='Элитный '+monster.name;monster.maxHp=Math.round(monster.maxHp*difficultyMultiplier);monster.hp=monster.maxHp;monster.atk=Math.round(monster.atk*difficultyMultiplier);monster.def=Math.round(monster.def*difficultyMultiplier);monster.xp=Math.round(monster.xp*rewardMultiplier);monster.coins=Math.round(monster.coins*rewardMultiplier)}
  monster.id=crypto.randomUUID?crypto.randomUUID():String(Date.now()+Math.random());monster.pos=epos;placeMonsterMarker(monster);monsters.push(monster);scheduleSave();
  log(`На карте появился противник: ${f.name}. Нажми на него, чтобы начать бой.`,'bad');render();
 }
@@ -408,7 +409,7 @@ function enterPixelWorld(){gpsAllowed=true;gpsPositionReady=true;gpsFixReady=tru
 window.__gameGpsHandlerReady=true;
 setInterval(()=>{for(const [id,p] of Object.entries(peers))if(Date.now()-p.at>10000){delete peers[id];if(peerMarkers[id])map.removeLayer(peerMarkers[id]);delete peerMarkers[id]}syncPeer()},5000);
 setInterval(()=>{const maxHp=effectiveMaxHp(),maxEnergy=effectiveMaxEnergy(),attributes=totalAttributes(),hpRegen=.0025+attributes.vitality/100*.0005,resourceRegen=.0075+attributes.wisdom/100*.001;if(state.hp<maxHp&&!enemy)state.hp=Math.min(maxHp,state.hp+maxHp*hpRegen);if(state.energy<maxEnergy&&!enemy)state.energy=Math.min(maxEnergy,state.energy+maxEnergy*resourceRegen);render()},1000);
-function scheduleMonsterSpawn(){setTimeout(()=>{if(!document.hidden&&monsters.length<25)spawnEnemy(false);scheduleMonsterSpawn()},Math.max(2000,Math.round(10000/(1+goldTreeBonus('monsterSpeed')))))}
+function scheduleMonsterSpawn(){setTimeout(()=>{if(!document.hidden&&monsters.length<60)spawnEnemy(false);scheduleMonsterSpawn()},3000)}
 scheduleMonsterSpawn();
 window.addEventListener('resize',()=>requestAnimationFrame(()=>map.invalidateSize()));window.addEventListener('orientationchange',()=>setTimeout(()=>map.invalidateSize(),250));
 renderBag();
