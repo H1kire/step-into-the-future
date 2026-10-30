@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Бой · Городские странники</title>
-<link rel="stylesheet" href="./css/battle.css?v=elite-balance-7">
+<link rel="stylesheet" href="./css/battle.css?v=enemy-balance-6">
 </head>
 <body>
 <header class="battle-top"><a class="exit" id="exitBattle" href="./index.html">← Выйти из боя</a><div class="battle-title">⚔️ СРАЖЕНИЕ</div><div class="top-level" id="playerLevelTop">Уровень 1</div></header>
@@ -31,10 +31,11 @@
     <button id="basicAttack" class="action-button attack">⚔️ Обычная атака</button>
     <button id="abilityAttack" class="action-button ability">✨ <span id="abilityName">Особая атака</span><small id="abilityCost">15 энергии</small></button>
     <button id="usePotion" class="action-button potion">🧪 Зелье здоровья <small id="potionCount">1 осталось</small></button>
+    <button id="useManaPotion" class="action-button potion">⚡ Зелье маны <small id="manaPotionCount">0 осталось</small></button>
   </div>
   <div class="battle-log" id="battleLog"></div>
   <div class="reward-note" id="rewardNote" hidden></div>
   <button id="returnAfterFight" class="action-button return" hidden>Вернуться на карту</button>
 </section>
-<script type="module" src="./js/battle.js?v=enemy-balance-5"></script>
+<script type="module" src="./js/battle.js?v=enemy-balance-6"></script>
 </body></html>
