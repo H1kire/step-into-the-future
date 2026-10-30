@@ -117,11 +117,11 @@ header{position:fixed;inset:0 0 auto;height:calc(58px + env(safe-area-inset-top,
 @media(max-width:780px){#bagPanel .inventory-heading-tools{gap:5px}#bagPanel .inventory-tab{min-width:25px;min-height:25px;padding:3px 6px}#bagPanel .inventory{grid-template-columns:repeat(6,minmax(0,1fr))}}
 
 /* Map quick actions stay grouped at the same fixed location. */
-#centerBtn.center-control,#clearEnemiesBtn.clear-enemies-control{position:fixed;right:12px;z-index:4400;box-shadow:0 5px 18px #0007}
-#centerBtn.center-control{bottom:18px}
-#clearEnemiesBtn.clear-enemies-control{bottom:66px;border-color:#8b5960;background:#38212a;color:#ffe3e6}
+#centerBtn.center-control,#clearEnemiesBtn.clear-enemies-control{position:fixed;bottom:18px;z-index:4901;min-height:46px;box-shadow:0 5px 18px #0007;touch-action:manipulation}
+#centerBtn.center-control{right:128px}
+#clearEnemiesBtn.clear-enemies-control{right:258px;border-color:#8b5960;background:#38212a;color:#ffe3e6}
 #clearEnemiesBtn.clear-enemies-control:hover{background:#57303a}
-@media(max-width:600px){#centerBtn.center-control,#clearEnemiesBtn.clear-enemies-control{right:8px;min-height:38px;padding:7px 10px;font-size:12px}#centerBtn.center-control{bottom:12px}#clearEnemiesBtn.clear-enemies-control{bottom:58px}}
+@media(max-width:600px){#centerBtn.center-control,#clearEnemiesBtn.clear-enemies-control{bottom:calc(10px + env(safe-area-inset-bottom,0px));min-height:44px;padding:9px 8px;font-size:11px;white-space:nowrap}#centerBtn.center-control{right:112px}#clearEnemiesBtn.clear-enemies-control{right:222px}}
 
 /* Static rarity-colored neon halo for elite enemies on the map. */
 .elite-monster-marker{position:relative;display:grid;place-items:center;width:38px;height:38px;border:2px solid var(--elite-color);border-radius:50%;background:#101820;box-shadow:0 0 0 3px color-mix(in srgb,var(--elite-color) 35%,transparent),0 0 18px color-mix(in srgb,var(--elite-color) 78%,transparent),inset 0 0 12px color-mix(in srgb,var(--elite-color) 30%,transparent);font-size:23px;filter:saturate(1.1)}
