@@ -117,7 +117,9 @@ export class PixelWorldRenderer {
     this.zoom = 0.82;
     this.player = { x: this.worldSize / 2, y: this.worldSize / 2 };
     this.character = "adventurer";
-    this.visibleChunks = new Set();
+    this.visibleChunkCount = 0;
+    this.lastDebugStats = '';
+    this.destroyed = false;
     this.chunkCache = new Map();
     this.maxCachedChunks = 160;
     this.keys = new Set();
@@ -128,14 +130,22 @@ export class PixelWorldRenderer {
     this.resizeObserver.observe(canvas);
     this.resize();
     this.bindInput();
-    this.frame = requestAnimationFrame(time => this.tick(time));
+    this.onVisibilityChange = () => {
+      if (document.hidden) { cancelAnimationFrame(this.frame); this.frame = 0; this.keys.clear(); this.lastTime = 0; }
+      else if (!this.destroyed && !this.frame) { this.lastTime = 0; this.frame = requestAnimationFrame(time => this.tick(time)); }
+    };
+    document.addEventListener('visibilitychange', this.onVisibilityChange);
+    if (!document.hidden) this.frame = requestAnimationFrame(time => this.tick(time));
   }
 
   resize() {
     const rect = this.canvas.getBoundingClientRect();
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
-    this.canvas.width = Math.max(1, Math.floor(rect.width * dpr));
-    this.canvas.height = Math.max(1, Math.floor(rect.height * dpr));
+    const width = Math.max(1, Math.floor(rect.width * dpr));
+    const height = Math.max(1, Math.floor(rect.height * dpr));
+    if (this.canvas.width === width && this.canvas.height === height && this.dpr === dpr) return;
+    this.canvas.width = width;
+    this.canvas.height = height;
     this.ctx.imageSmoothingEnabled = false;
     this.dpr = dpr;
   }
@@ -254,7 +264,7 @@ export class PixelWorldRenderer {
     this.lastTime = time;
     this.update(dt);
     this.render();
-    this.frame = requestAnimationFrame(next => this.tick(next));
+    if (!this.destroyed && !document.hidden) this.frame = requestAnimationFrame(next => this.tick(next));
   }
 
   update(dt) {
@@ -295,11 +305,10 @@ export class PixelWorldRenderer {
     const maxCx = Math.min(Math.ceil(this.worldSize / CHUNK_SIZE) - 1, Math.floor((left + viewW) / CHUNK_SIZE));
     const minCy = Math.max(0, Math.floor(top / CHUNK_SIZE));
     const maxCy = Math.min(Math.ceil(this.worldSize / CHUNK_SIZE) - 1, Math.floor((top + viewH) / CHUNK_SIZE));
-    this.visibleChunks.clear();
+    let visibleChunkCount = 0;
     for (let cy = minCy; cy <= maxCy; cy++) {
       for (let cx = minCx; cx <= maxCx; cx++) {
-        const key = `${cx},${cy}`;
-        this.visibleChunks.add(key);
+        visibleChunkCount++;
         const chunk = this.chunkCanvas(cx, cy);
         const sx = (cx * CHUNK_SIZE - left) * zoom;
         const sy = (cy * CHUNK_SIZE - top) * zoom;
@@ -323,15 +332,23 @@ export class PixelWorldRenderer {
       ctx.strokeStyle = "#fff0a3"; ctx.lineWidth = Math.max(1, zoom * 0.7);
       ctx.strokeRect(Math.round((this.destination.x - left) * zoom - 4 * zoom), Math.round((this.destination.y - top) * zoom - 4 * zoom), Math.round(8 * zoom), Math.round(8 * zoom));
     }
-    this.canvas.dataset.visibleChunks = String(this.visibleChunks.size);
-    this.canvas.dataset.cachedChunks = String(this.chunkCache.size);
-    this.canvas.dataset.worldX = String(Math.round(this.player.x));
-    this.canvas.dataset.worldY = String(Math.round(this.player.y));
+    const debugStats = `${visibleChunkCount}|${this.chunkCache.size}|${Math.round(this.player.x)}|${Math.round(this.player.y)}`;
+    if (debugStats !== this.lastDebugStats) {
+      this.lastDebugStats = debugStats;
+      this.canvas.dataset.visibleChunks = String(visibleChunkCount);
+      this.canvas.dataset.cachedChunks = String(this.chunkCache.size);
+      this.canvas.dataset.worldX = String(Math.round(this.player.x));
+      this.canvas.dataset.worldY = String(Math.round(this.player.y));
+    }
   }
 
   destroy() {
+    this.destroyed = true;
     cancelAnimationFrame(this.frame);
+    this.frame = 0;
+    document.removeEventListener('visibilitychange', this.onVisibilityChange);
     this.resizeObserver.disconnect();
+    this.keys.clear();
   }
 }
 
