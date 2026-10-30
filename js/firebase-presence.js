@@ -171,9 +171,9 @@ onAuthStateChanged(auth, async user => {
           if (localSave) pendingCloudSave = localSave;
         }
         cloudReady = true;
-        if (pendingCloudSave) queueCloudSave(pendingCloudSave, !cloudSnapshot.exists());
         if (cloudSaveTimer) clearTimeout(cloudSaveTimer);
         if (cloudSaveInterval) clearInterval(cloudSaveInterval);
+        if (pendingCloudSave) queueCloudSave(pendingCloudSave, !cloudSnapshot.exists());
         cloudSaveInterval = setInterval(flushCloudSave, 60000);
       } catch (error) {
         cloudReady = false;
