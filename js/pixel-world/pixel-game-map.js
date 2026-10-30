@@ -31,25 +31,28 @@ if (canvas) {
     return spriteCache.get(key);
   }
 
-  function refresh() {
+  let lastEntitySignature = '';
+  function refreshEntities() {
     const api = window.GamePixelAPI;
-    if (!api) { requestAnimationFrame(refresh); return; }
+    if (!api) return;
     const snapshot = api.getSnapshot();
     const classId = snapshot.character || "classless";
-    if (classId !== activeCharacter) {
-      activeCharacter = classId;
-      world.setCharacter(classId);
-    }
-    const entities = (snapshot.monsters || []).map(monster => ({
-      ...monster, type: "monster", sprite: spriteFor({ ...monster, type: "monster" }), width: 16, height: 20
-    }));
+    if (classId !== activeCharacter) { activeCharacter = classId; world.setCharacter(classId); }
+    const monsters = snapshot.monsters || [];
+    const signature = [classId,
+      ...monsters.map(monster => `${monster.id}:${monster.x}:${monster.y}:${monster.imageKey}`),
+      snapshot.merchant ? `merchant:${snapshot.merchant.x}:${snapshot.merchant.y}` : '',
+      snapshot.priest ? `priest:${snapshot.priest.x}:${snapshot.priest.y}` : ''
+    ].join('|');
+    if (signature === lastEntitySignature) return;
+    lastEntitySignature = signature;
+    const entities = monsters.map(monster => ({ ...monster, type: "monster", sprite: spriteFor({ imageKey: monster.imageKey, type: "monster" }), width: 16, height: 20 }));
     if (snapshot.merchant) entities.push({ ...snapshot.merchant, type: "merchant", sprite: spriteFor({ type: "merchant" }), width: 16, height: 20 });
     if (snapshot.priest) entities.push({ ...snapshot.priest, type: "priest", sprite: spriteFor({ type: "priest" }), width: 16, height: 20 });
     world.setEntities(entities, entity => {
       if (entity.type === "monster") api.selectMonster(entity.id);
       else api.selectActor(entity.type);
     });
-    requestAnimationFrame(refresh);
   }
 
   const initial = () => {
@@ -59,10 +62,11 @@ if (canvas) {
       world.setPosition(snapshot.player.x, snapshot.player.y);
       world.setCharacter(snapshot.character || "classless");
     }
-    refresh();
+    refreshEntities();
   };
   initial();
+  const entityRefreshTimer = window.setInterval(refreshEntities, 250);
   window.addEventListener("resize", () => world.resize());
-  window.addEventListener("pagehide", () => world.destroy(), { once: true });
+  window.addEventListener("pagehide", () => { window.clearInterval(entityRefreshTimer); world.destroy(); }, { once: true });
   window.pixelGameWorld = world;
 }
