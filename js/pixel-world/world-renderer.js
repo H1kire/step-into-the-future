@@ -172,7 +172,7 @@ export class PixelWorldRenderer {
       const sy = (event.clientY - rect.top) * this.dpr;
       const clickX = this.camera.x + (sx - this.canvas.width / 2) / (this.zoom * this.dpr);
       const clickY = this.camera.y + (sy - this.canvas.height / 2) / (this.zoom * this.dpr);
-      const target = [...this.entities].reverse().find(entity => Math.abs(entity.x - clickX) <= 13 && Math.abs(entity.y - clickY) <= 15);
+      const target = [...this.entities].reverse().find(entity => Math.abs(entity.x - clickX) <= 22 && Math.abs(entity.y - clickY) <= 24);
       if (target && this.onEntityClick) { this.onEntityClick(target); return; }
       this.destination = {
         x: this.clampWorld(this.camera.x + (sx - this.canvas.width / 2) / (this.zoom * this.dpr)),
