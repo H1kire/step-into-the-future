@@ -52,7 +52,7 @@ function publishPosition() {
   if (wait > 0) { setTimeout(publishPosition, wait); return; }
   lastSentAt = Date.now();
   set(currentPlayerRef, { ...lastPosition, updatedAt: Date.now() })
-    .catch(error => { if (onlineStatus) if (onlineStatus) onlineStatus.textContent = 'Онлайн: ошибка записи'; console.error('Firebase presence write failed', error); });
+    .catch(error => { if (onlineStatus) onlineStatus.textContent = 'Онлайн: ошибка записи'; console.error('Firebase presence write failed', error); });
 }
 setInterval(() => { if (!document.hidden) publishPosition(); }, 10000);
 document.addEventListener('visibilitychange', () => { if (!document.hidden) publishPosition(); });
@@ -101,7 +101,7 @@ function watchProfile(user) {
   unsubscribeProfile = onValue(profileRef, snapshot => {
     if (snapshot.exists()) { chatName = snapshot.val().nickname || `user${snapshot.val().accountNumber}`; if (lastPosition) lastPosition.name = chatName; dispatchAccount(user, snapshot.val()); publishPosition(); }
   }, error => {
-    onlineStatus.textContent = 'Аккаунт: не удалось загрузить профиль';
+    if (onlineStatus) onlineStatus.textContent = 'Аккаунт: не удалось загрузить профиль';
     console.error('Firebase profile read failed', error);
   });
 }
@@ -182,7 +182,7 @@ onAuthStateChanged(auth, async user => {
       }
     } catch (error) {
       dispatchAccount(user, null);
-      onlineStatus.textContent = 'Аккаунт: обнови Rules базы Firebase';
+      if (onlineStatus) onlineStatus.textContent = 'Аккаунт: обнови Rules базы Firebase';
       console.error('Firebase profile setup failed', error);
     }
   }
@@ -195,18 +195,18 @@ onAuthStateChanged(auth, async user => {
   unsubscribePlayers = onValue(ref(database, 'players'), snapshot => {
     window.dispatchEvent(new CustomEvent('firebase:players', { detail: snapshot.val() || {} }));
   }, error => {
-    onlineStatus.textContent = 'Онлайн: нет доступа к игрокам';
+    if (onlineStatus) onlineStatus.textContent = 'Онлайн: нет доступа к игрокам';
     console.error('Firebase players read failed', error);
   });
   onValue(ref(database, '.info/connected'), snapshot => {
     const connected = snapshot.val() === true;
     window.dispatchEvent(new CustomEvent('firebase:chat-status', { detail: { connected } }));
-    if (!connected) { onlineStatus.textContent = 'Онлайн: переподключение…'; return; }
+    if (!connected) { if (onlineStatus) onlineStatus.textContent = 'Онлайн: переподключение…'; return; }
     onDisconnect(currentPlayerRef).remove().then(() => {
-      onlineStatus.textContent = 'Онлайн: подключено';
+      if (onlineStatus) onlineStatus.textContent = 'Онлайн: подключено';
       publishPosition();
     }).catch(error => {
-      onlineStatus.textContent = 'Онлайн: ошибка настройки';
+      if (onlineStatus) onlineStatus.textContent = 'Онлайн: ошибка настройки';
       console.error('Firebase disconnect cleanup failed', error);
     });
   });
@@ -236,7 +236,7 @@ async function connectGoogleAccount() {
 
 function showAuthError(error) {
   const code = String(error?.code || 'unknown');
-  onlineStatus.textContent = code === 'auth/operation-not-allowed'
+  if (onlineStatus) onlineStatus.textContent = code === 'auth/operation-not-allowed'
     ? 'Google-вход выключен в Firebase Authentication'
     : code === 'auth/unauthorized-domain'
       ? 'Добавь домен сайта в Firebase Authentication → Settings'
