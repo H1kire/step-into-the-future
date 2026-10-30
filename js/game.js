@@ -240,9 +240,7 @@ function spawnEnemy(force=true){
  const level=rollMonsterLevel(),scale=1+Math.pow(Math.max(0,level-1),.82)*.12;
  const baseHp=Math.round(500*Math.pow(level,1.1)*(f.hp/50));
  const monster={...f,level,maxHp:Math.max(baseHp,Math.ceil(totalAttack()*2)),hp:Math.max(baseHp,Math.ceil(totalAttack()*2)),atk:Math.round(f.atk*(1+Math.pow(Math.max(0,level-1),.78)*.09)*5.5*11),def:Math.round(f.def*(1+Math.pow(Math.max(0,level-1),.72)*.08)*5.5*11),xp:Math.round((30+f.xp*.7)*Math.pow(level,.72)),coins:Math.round((5+f.coins*.7)*Math.pow(level,.58)),balanceVersion:6};
- const angle=Math.random()*Math.PI*2,meters=Math.random()*45;
- const dLat=(meters/111320)*Math.cos(angle),dLng=(meters/(111320*Math.max(.2,Math.cos(pos[0]*Math.PI/180))))*Math.sin(angle);
- const epos=[pos[0]+dLat,pos[1]+dLng];
+ let epos=null;for(let attempt=0;attempt<50;attempt++){const angle=Math.random()*Math.PI*2,meters=5+Math.random()*40,dLat=(meters/111320)*Math.cos(angle),dLng=(meters/(111320*Math.max(.2,Math.cos(pos[0]*Math.PI/180))))*Math.sin(angle),candidate=[pos[0]+dLat,pos[1]+dLng],pixel=latLngToPixel(candidate);const spaced=monsters.every(existing=>{const other=latLngToPixel(existing.pos),gap=5+Math.random()*5;return Math.hypot(pixel.x-other.x,pixel.y-other.y)>=16+gap});if(spaced){epos=candidate;break}}if(!epos){if(force)log('Не удалось найти свободное место для нового врага.');return;}
  const eliteChance=Math.min(1,.05*(1+abilityBonus('drop')+goldTreeBonus('drop')));if(Math.random()<eliteChance){const [eliteRarity,eliteKey]=eliteRarityRoll(),eliteTier=Math.max(0,rarities.findIndex(r=>r[1]===eliteKey));const difficultyMultiplier=5*(eliteTier+1),rewardMultiplier=2*(eliteTier+1);monster.elite=true;monster.eliteRarity=eliteRarity;monster.eliteKey=eliteKey;monster.eliteTier=eliteTier;monster.eliteDifficultyMultiplier=difficultyMultiplier;monster.eliteRewardMultiplier=rewardMultiplier;monster.name='Элитный '+monster.name;monster.maxHp=Math.round(monster.maxHp*difficultyMultiplier);monster.hp=monster.maxHp;monster.atk=Math.round(monster.atk*difficultyMultiplier);monster.def=Math.round(monster.def*difficultyMultiplier);monster.xp=Math.round(monster.xp*rewardMultiplier);monster.coins=Math.round(monster.coins*rewardMultiplier)}
  monster.id=crypto.randomUUID?crypto.randomUUID():String(Date.now()+Math.random());monster.pos=epos;placeMonsterMarker(monster);monsters.push(monster);scheduleSave();
  log(`На карте появился противник: ${f.name}. Нажми на него, чтобы начать бой.`,'bad');render();
@@ -303,6 +301,9 @@ function buyMerchantOffer(offer){
  if(offer==='potion'){
   if(state.potions>=10||state.coins<100)return;
   state.coins-=100;state.potions++;log('Куплено зелье здоровья за 100 монет.','good');
+ }else if(offer==='mana-potion'){
+  if(state.manaPotions>=10||state.coins<100)return;
+  state.coins-=100;state.manaPotions++;log('Куплено зелье маны за 100 монет.','good');
  }else{
   const item=merchantCatalog.find(good=>`item:${good.type}`===offer);if(!item||state.coins<item.price||firstEmptyInventorySlot()<0)return;
   state.coins-=item.price;storeInventoryItem({name:`${item.type} · Обычное`,type:item.type,key:'common',level:1,requiredLevel:1,basePrice:item.price,attackBonus:item.attackBonus||0,defenseBonus:item.defenseBonus||0,bagBonus:item.bagBonus||0});log(`Куплено: ${item.type} · Обычное за ${formatGameNumber(item.price)} монет.`,'good');renderBag();
