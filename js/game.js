@@ -90,6 +90,15 @@ function setupPanels(){
   bar.addEventListener('pointerup',()=>drag=null);bar.addEventListener('pointercancel',()=>drag=null);
  };
  document.querySelectorAll('.floating-panel .panel-title').forEach(bar=>window.registerFloatingPanel(bar.closest('.floating-panel')));
+ // Register panels that are added later (for example Friends, Group, Mail and DM).
+ const floatingPanelObserver=new MutationObserver(records=>{
+  for(const record of records)for(const node of record.addedNodes){
+   if(!(node instanceof Element))continue;
+   if(node.matches('.floating-panel'))window.registerFloatingPanel(node);
+   node.querySelectorAll?.('.floating-panel').forEach(panel=>window.registerFloatingPanel(panel));
+  }
+ });
+ floatingPanelObserver.observe(document.body,{childList:true,subtree:true});
  window.addEventListener('resize',()=>document.querySelectorAll('.floating-panel:not(#playerHud):not(.hidden)').forEach(panel=>fitPanelToViewport(panel)));
  const centerButton=$('centerBtn'),clearButton=$('clearEnemiesBtn');if(centerButton){centerButton.classList.add('center-control');document.body.append(centerButton)}if(clearButton){clearButton.classList.add('clear-enemies-control');document.body.append(clearButton)}document.querySelector('.mapbuttons')?.remove();
  if(clearButton)clearButton.addEventListener('click',()=>{if(enemy){enemy=null;enemyMarker=null;turn='player';$('enemyCard').classList.remove('show');$('combatStatus').textContent='Враги очищены. Найди нового противника.'}for(const monster of monsters)if(monster.marker)map.removeLayer(monster.marker);monsters=[];saveGame();log('Все противники удалены. Начинаем новый цикл появления врагов.','good');spawnEnemy(true);clearButton.blur()})
