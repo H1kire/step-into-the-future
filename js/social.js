@@ -59,7 +59,7 @@ async function addFriend(){
     snap.forEach(child=>{if(String(child.val()?.nickname||'').toLocaleLowerCase()===nickname.toLocaleLowerCase()){targetUid=child.key;target=child.val()}});
     if(!targetUid){message('friendFeedback','Игрок с таким никнеймом не найден.');return}
     if(targetUid===uid){message('friendFeedback','Нельзя добавить самого себя.');return}
-    await Promise.all([set(ref(db,'friends/'+uid+'/'+targetUid),{uid:targetUid,addedAt:Date.now()}),set(ref(db,'friends/'+targetUid+'/'+uid),{uid,addedAt:Date.now()})]);
+    await set(ref(db,'friends/'+uid+'/'+targetUid),{uid:targetUid,addedAt:Date.now()});
     message('friendFeedback','Игрок '+target.nickname+' добавлен в друзья!');
     $('friendNickname').value='';renderFriends();
   }catch(error){message('friendFeedback','Не удалось добавить: '+(error.code||error.message)+' · проверь Firebase Rules.')}
