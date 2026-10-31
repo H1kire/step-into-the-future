@@ -149,7 +149,8 @@ async function ensureAccountProfile(user) {
     accountNumber,
     nickname: defaultNickname,
     createdAt: Date.now(),
-    nicknameChangedAt: 0
+    nicknameChangedAt: 0,
+    nicknameStandardized: true
   };
 
   if (!profile) {
@@ -159,8 +160,11 @@ async function ensureAccountProfile(user) {
   } else {
     const updates = {};
     if (!Number.isSafeInteger(profile.accountNumber) || profile.accountNumber <= 0) updates.accountNumber = accountNumber;
-    // Standardize every returning account to its permanent global User<number> name.
-    if (profile.nickname !== defaultNickname) updates.nickname = defaultNickname;
+    // Migrate each existing account once; later custom nickname changes remain intact.
+    if (profile.nicknameStandardized !== true) {
+      if (profile.nickname !== defaultNickname) updates.nickname = defaultNickname;
+      updates.nicknameStandardized = true;
+    }
     if (!profile.createdAt) updates.createdAt = Date.now();
     if (profile.nicknameChangedAt == null) updates.nicknameChangedAt = 0;
     if (Object.keys(updates).length) {
