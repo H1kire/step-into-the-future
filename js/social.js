@@ -108,8 +108,11 @@ async function renderGroup(){
   const codeRow=document.createElement('div');codeRow.className='group-code';const codeText=document.createElement('code');codeText.textContent=code;const copy=document.createElement('button');copy.className='secondary tiny-copy';copy.textContent='⧉';copy.title='Копировать код';copy.onclick=()=>navigator.clipboard?.writeText(code);codeRow.append('Код группы: ',codeText,copy);
   const list=document.createElement('div');list.className='group-slots';
   for(let i=0;i<5;i++){const m=members[i],slot=document.createElement('div');slot.className='group-slot';slot.textContent=m?(i+1+'. '+m.nickname+' · '+classLabel(m.classId)+' · ур. '+m.level):(i+1+'. Свободное место');list.append(slot)}
+  const settings=document.createElement('div');settings.className='group-settings';settings.innerHTML='<label><input type="checkbox" id="groupBattleToggle" checked> Групповое сражение</label><label><input type="checkbox" id="groupLootToggle" checked> Общая группа</label>';
   const leave=document.createElement('button');leave.className='danger full';leave.textContent='Покинуть группу';leave.onclick=leaveGroup;
-  $('groupDetails').replaceChildren(head,codeRow,list,leave);
+  $('groupDetails').replaceChildren(head,codeRow,list,settings,leave);
+  const battleToggle=$('groupBattleToggle');battleToggle.checked=group.groupBattleEnabled!==false;battleToggle.onchange=()=>{if(group.leaderUid===uid)update(ref(db,'groups/'+code),{groupBattleEnabled:battleToggle.checked});else battleToggle.checked=group.groupBattleEnabled!==false};
+  const lootToggle=$('groupLootToggle');lootToggle.checked=group.sharedCombatEnabled!==false;lootToggle.onchange=()=>{if(group.leaderUid===uid)update(ref(db,'groups/'+code),{sharedCombatEnabled:lootToggle.checked});else lootToggle.checked=group.sharedCombatEnabled!==false};
 }
 function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 async function joinGroup(){
@@ -121,7 +124,7 @@ async function joinGroup(){
 }
 async function inviteToGroup(friendUid,nickname){
   if(!uid){return}
-  try{const s=await get(ref(db,'groupMembers/'+uid)),code=s.val();if(!code){alert('Сначала создай группу или вступи в неё.');return}
+  try{const s=await get(ref(db,'groupMembers/'+uid)),code=s.val();if(!code){alert('Сначала создай группу или вступи в неё.');return} const currentGroup=await get(ref(db,'groups/'+code));if(currentGroup.val()?.leaderUid!==uid){alert('Приглашать игроков может только создатель группы.');return}
     await set(push(ref(db,'mail/'+friendUid)),{type:'group-invite',fromUid:uid,fromName:profile?.nickname||'Игрок',groupCode:code,text:'Приглашение в группу от '+(profile?.nickname||'Игрок'),createdAt:Date.now(),read:false});
     alert('Приглашение отправлено игроку '+nickname+' на почту.');
   }catch(error){alert('Не удалось отправить приглашение: '+(error.code||error.message))}
