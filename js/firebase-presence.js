@@ -1,7 +1,7 @@
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js';
 import { initializeAppCheck, ReCaptchaV3Provider } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-app-check.js';
 import { getAuth, signInAnonymously, GoogleAuthProvider, linkWithPopup, signInWithPopup, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js';
-import { getDatabase, ref, onValue, onChildAdded, set, onDisconnect, get, runTransaction, update, serverTimestamp, push, query, orderByChild, limitToLast, endAt, remove } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-database.js';
+import { getDatabase, ref, onValue, onChildAdded, set, onDisconnect, get, runTransaction, update, serverTimestamp, push, query, orderByChild, limitToLast, limitToFirst, endAt, remove } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-database.js';
 
 import { firebaseConfig, appCheckSiteKey, developerUid } from './firebase-config.js';
 
@@ -200,28 +200,35 @@ async function ensureAccountProfile(user) {
   const activeNickname = String(profile.nickname || defaultNickname).trim();
   const nicknameKey = activeNickname.toLocaleLowerCase();
   const nicknameIndexRef = ref(database, 'nicknameIndex/' + nicknameKey);
-  let indexResult = await runTransaction(nicknameIndexRef, current =>
-    current === null || current === user.uid ? user.uid : undefined
-  );
+  let indexResult = null;
+  try {
+    indexResult = await runTransaction(nicknameIndexRef, current =>
+      current === null || current === user.uid ? user.uid : undefined
+    );
 
-  // A stale index can belong to an account that has already changed its name.
-  if (!indexResult.committed) {
-    const indexSnapshot = await get(nicknameIndexRef);
-    const previousOwnerUid = indexSnapshot.val();
-    if (previousOwnerUid && previousOwnerUid !== user.uid) {
-      const ownerProfile = (await get(ref(database, 'profiles/' + previousOwnerUid))).val();
-      const ownerNickname = String(ownerProfile?.nickname || '').trim().toLocaleLowerCase();
-      if (ownerNickname !== nicknameKey) {
-        indexResult = await runTransaction(nicknameIndexRef, current =>
-          current === previousOwnerUid ? user.uid : current === user.uid ? user.uid : undefined
-        );
+    // A stale index can belong to an account that has already changed its name.
+    if (!indexResult.committed) {
+      const indexSnapshot = await get(nicknameIndexRef);
+      const previousOwnerUid = indexSnapshot.val();
+      if (previousOwnerUid && previousOwnerUid !== user.uid) {
+        const ownerProfile = (await get(ref(database, 'profiles/' + previousOwnerUid))).val();
+        const ownerNickname = String(ownerProfile?.nickname || '').trim().toLocaleLowerCase();
+        if (ownerNickname !== nicknameKey) {
+          indexResult = await runTransaction(nicknameIndexRef, current =>
+            current === previousOwnerUid ? user.uid : current === user.uid ? user.uid : undefined
+          );
+        }
       }
     }
+  } catch (error) {
+    // The nickname stored in profiles/{uid} is the source of truth for login.
+    // A denied or stale secondary index must never hide an otherwise valid profile.
+    console.warn('Nickname index could not be synchronized; profile login continues', activeNickname, error);
   }
 
-  // A legacy collision in the secondary index must not invalidate a valid
-  // Firebase account or hide its saved profile/nickname.
-  if (!indexResult.committed) console.warn('Nickname index is occupied; profile login continues', activeNickname);
+  // A legacy collision or permission issue in the secondary index must not
+  // invalidate a valid Firebase account or hide its saved nickname.
+  if (indexResult && !indexResult.committed) console.warn('Nickname index is occupied; profile login continues', activeNickname);
   return profile;
 }
 function watchProfile(user) {
