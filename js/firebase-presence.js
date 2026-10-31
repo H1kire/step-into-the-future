@@ -208,7 +208,7 @@ onAuthStateChanged(auth, async user => {
         if (cloudSaveTimer) clearTimeout(cloudSaveTimer);
         if (cloudSaveInterval) clearInterval(cloudSaveInterval);
         if (pendingCloudSave && cloudAutoSaveEnabled) queueCloudSave(pendingCloudSave);
-        cloudSaveInterval = setInterval(flushCloudSave, 60000);
+        cloudSaveInterval = setInterval(() => flushCloudSave(), 60000);
       } catch (error) {
         cloudReady = false;
         if (onlineStatus) onlineStatus.textContent = 'Облако: ошибка загрузки';
