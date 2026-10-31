@@ -121,6 +121,22 @@ function dispatchAccount(user, profile) {
   }}));
 }
 
+async function allocateAccountNumber(minimumExistingNumber = 0) {
+  const counterRef = ref(database, 'accountCounter');
+  // Rules require each counter write to increase by exactly one. Catch up
+  // safely if older profiles were created before the counter was introduced.
+  for (let attempt = 0; attempt < 10000; attempt++) {
+    const result = await runTransaction(counterRef, value => {
+      const current = Number.isSafeInteger(value) && value >= 0 ? value : 0;
+      return current + 1;
+    });
+    if (!result.committed) throw new Error('Не удалось получить глобальный номер аккаунта');
+    const number = Number(result.snapshot.val());
+    if (Number.isSafeInteger(number) && number > minimumExistingNumber) return number;
+  }
+  throw new Error('Слишком большой разрыв в нумерации аккаунтов');
+}
+
 async function ensureAccountProfile(user) {
   const userProfileRef = ref(database, `profiles/${user.uid}`);
   const existing = await get(userProfileRef);
@@ -128,8 +144,6 @@ async function ensureAccountProfile(user) {
   let accountNumber = Number.isSafeInteger(profile?.accountNumber) && profile.accountNumber > 0 ? profile.accountNumber : 0;
 
   if (!accountNumber) {
-    // Seed the global sequence from the number of existing profiles and the
-    // largest number already assigned, then allocate atomically.
     const profilesSnapshot = await get(ref(database, 'profiles'));
     let existingCount = 0, highestAssigned = 0;
     profilesSnapshot.forEach(child => {
@@ -137,11 +151,7 @@ async function ensureAccountProfile(user) {
       const n = Number(child.val()?.accountNumber);
       if (Number.isSafeInteger(n) && n > highestAssigned) highestAssigned = n;
     });
-    const counterResult = await runTransaction(ref(database, 'accountCounter'), value =>
-      Math.max(Number.isSafeInteger(value) && value >= 0 ? value : 0, existingCount, highestAssigned) + 1
-    );
-    if (!counterResult.committed) throw new Error('Не удалось получить глобальный номер аккаунта');
-    accountNumber = counterResult.snapshot.val();
+    accountNumber = await allocateAccountNumber(Math.max(existingCount, highestAssigned));
   }
 
   const defaultNickname = `User${accountNumber}`;
@@ -160,28 +170,50 @@ async function ensureAccountProfile(user) {
   } else {
     const updates = {};
     if (!Number.isSafeInteger(profile.accountNumber) || profile.accountNumber <= 0) updates.accountNumber = accountNumber;
-    // Migrate each existing account once; later custom nickname changes remain intact.
+    // Never overwrite a nickname that the player has explicitly changed.
+    // Old untouched profiles still receive their numbered default nickname.
     if (profile.nicknameStandardized !== true) {
-      if (profile.nickname !== defaultNickname) updates.nickname = defaultNickname;
+      const hasExplicitNicknameChange = Number(profile.nicknameChangedAt) > 0;
+      const currentNickname = String(profile.nickname || '').trim();
+      if (!hasExplicitNicknameChange || !currentNickname) updates.nickname = defaultNickname;
       updates.nicknameStandardized = true;
     }
     if (!profile.createdAt) updates.createdAt = Date.now();
     if (profile.nicknameChangedAt == null) updates.nicknameChangedAt = 0;
     if (Object.keys(updates).length) {
-      const oldNicknameKey = String(profile.nickname || '').toLocaleLowerCase();
       await update(userProfileRef, updates);
       profile = { ...profile, ...updates };
-      if (oldNicknameKey && oldNicknameKey !== defaultNickname.toLocaleLowerCase()) {
-        await runTransaction(ref(database, 'nicknameIndex/' + oldNicknameKey), current => current === user.uid ? null : current);
+    }
+  }
+
+  // Reserve the nickname that is actually stored in the profile. Previously
+  // this always reserved UserN, even for a custom nickname; a collision on
+  // that unused default nickname could abort login and make the UI show "user".
+  const activeNickname = String(profile.nickname || defaultNickname).trim();
+  const nicknameKey = activeNickname.toLocaleLowerCase();
+  const nicknameIndexRef = ref(database, 'nicknameIndex/' + nicknameKey);
+  let indexResult = await runTransaction(nicknameIndexRef, current =>
+    current === null || current === user.uid ? user.uid : undefined
+  );
+
+  // A stale index can belong to an account that has already changed its name.
+  if (!indexResult.committed) {
+    const indexSnapshot = await get(nicknameIndexRef);
+    const previousOwnerUid = indexSnapshot.val();
+    if (previousOwnerUid && previousOwnerUid !== user.uid) {
+      const ownerProfile = (await get(ref(database, 'profiles/' + previousOwnerUid))).val();
+      const ownerNickname = String(ownerProfile?.nickname || '').trim().toLocaleLowerCase();
+      if (ownerNickname !== nicknameKey) {
+        indexResult = await runTransaction(nicknameIndexRef, current =>
+          current === previousOwnerUid ? user.uid : current === user.uid ? user.uid : undefined
+        );
       }
     }
   }
 
-  const nicknameKey = defaultNickname.toLocaleLowerCase();
-  const indexResult = await runTransaction(ref(database, 'nicknameIndex/' + nicknameKey), current =>
-    current === null || current === user.uid ? user.uid : undefined
-  );
-  if (!indexResult.committed) throw new Error(`Не удалось зарезервировать ник ${defaultNickname}`);
+  // A legacy collision in the secondary index must not invalidate a valid
+  // Firebase account or hide its saved profile/nickname.
+  if (!indexResult.committed) console.warn('Nickname index is occupied; profile login continues', activeNickname);
   return profile;
 }
 function watchProfile(user) {
