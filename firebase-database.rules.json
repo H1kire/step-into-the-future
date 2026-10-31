@@ -187,6 +187,25 @@
           ".validate": "newData.isNumber()"
         }
       }
+    },
+    "groupBattleSessions": {
+      "$sessionId": {
+        ".read": "auth != null && root.child('groups').child(data.child('groupId').val()).child('members').child(auth.uid).exists()",
+        ".write": "auth != null && ((!data.exists() && newData.child('leaderUid').val() === auth.uid) || data.child('leaderUid').val() === auth.uid)",
+        "roster": {
+          "$uid": {
+            ".write": "auth != null && auth.uid === $uid && root.child('groups').child(data.parent().parent().child('groupId').val()).child('members').child(auth.uid).exists()"
+          }
+        },
+        "actions": {
+          "$uid": {
+            ".write": "auth != null && auth.uid === $uid && root.child('groups').child(data.parent().parent().child('groupId').val()).child('members').child(auth.uid).exists()"
+          }
+        },
+        "$other": {
+          ".validate": true
+        }
+      }
     }
   }
 }
