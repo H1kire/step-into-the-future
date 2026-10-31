@@ -222,6 +222,7 @@ onAuthStateChanged(auth, async user => {
     }
   }
   currentPlayerRef = ref(database, `players/${user.uid}`);
+  window.dispatchEvent(new Event('firebase:request-position'));
   watchChat(user);
   if (chatCleanupTimer) clearInterval(chatCleanupTimer);
   cleanupExpiredChat();
