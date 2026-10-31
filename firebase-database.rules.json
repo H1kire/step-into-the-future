@@ -137,9 +137,9 @@
     "groups": {
       ".read": "auth != null",
       "$groupId": {
-        ".write": "auth != null && ((!data.exists() && newData.child('leaderUid').val() === auth.uid) || data.child('leaderUid').val() === auth.uid || (data.child('members').child(auth.uid).exists() && !newData.child('members').child(auth.uid).exists()) || (!data.child('members').child(auth.uid).exists() && newData.child('members').child(auth.uid).exists() && data.child('members').numChildren() < 5))",
+        ".write": "auth != null && ((!data.exists() && newData.child('leaderUid').val() === auth.uid) || data.child('leaderUid').val() === auth.uid || (data.child('members').child(auth.uid).exists() && !newData.child('members').child(auth.uid).exists()) || (!data.child('members').child(auth.uid).exists() && newData.child('members').child(auth.uid).exists()))",
         "members": {
-          ".validate": "newData.numChildren() <= 5"
+          ".validate": "newData.hasChildren()"
         }
       }
     },
