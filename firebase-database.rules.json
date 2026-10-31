@@ -20,7 +20,7 @@
           ".validate": "newData.isNumber() && (!data.exists() || newData.val() === data.val())"
         },
         "nicknameChangedAt": {
-          ".validate": "newData.isNumber() && (newData.val() === data.val() || (newData.parent().child('nickname').val() !== data.parent().child('nickname').val() && newData.val() <= now && (!data.exists() || now - data.val() >= 86400000)))"
+          ".validate": "newData.isNumber() && ((!data.exists() && newData.val() === 0) || newData.val() === data.val() || (newData.parent().child('nickname').val() !== data.parent().child('nickname').val() && newData.val() <= now && (!data.exists() || now - data.val() >= 86400000)))"
         },
         "nicknameStandardized": {
           ".validate": "newData.isBoolean() && (!data.exists() || newData.val() === data.val())"
