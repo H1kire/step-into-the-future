@@ -8,14 +8,16 @@ import { firebaseConfig, appCheckSiteKey, developerUid } from './firebase-config
 const onlineStatus = document.getElementById('onlineStatus');
 let lastPosition = null, lastSentAt = 0, currentPlayerRef = null, unsubscribePlayers = null, unsubscribeProfile = null, unsubscribeChat = null, chatCleanupTimer = null, cleanupRunning = false, chatName = 'Странник', lastChatSentAt = 0;
 let cloudUid = null, cloudReady = false, pendingCloudSave = null, cloudSaveTimer = null, cloudSaveInterval = null, lastCloudWriteAt = 0;
+let cloudAutoSaveEnabled = true;
+try { cloudAutoSaveEnabled = localStorage.getItem('game-cloud-autosave-v1') !== 'false'; } catch {}
 const app = initializeApp(firebaseConfig);
 if (appCheckSiteKey) initializeAppCheck(app, { provider: new ReCaptchaV3Provider(appCheckSiteKey), isTokenAutoRefreshEnabled: true });
 const auth = getAuth(app);
 const database = getDatabase(app);
 const GAME_SAVE_KEY = 'gorodskie-stranniki-save-v1';
-async function flushCloudSave() {
+async function flushCloudSave(force = false) {
   const user = auth.currentUser;
-  if (!cloudReady || !user || user.isAnonymous || user.uid !== cloudUid || !pendingCloudSave) return;
+  if (!cloudReady || !user || user.isAnonymous || user.uid !== cloudUid || !pendingCloudSave || (!cloudAutoSaveEnabled && !force)) return;
   const snapshot = pendingCloudSave; pendingCloudSave = null;
   try {
     const data = { ...snapshot, lastSimulationAt: Date.now() };
@@ -31,12 +33,44 @@ async function flushCloudSave() {
 function queueCloudSave(save, force = false) {
   if (!save || typeof save !== 'object') return;
   pendingCloudSave = save;
-  if (!cloudReady || !cloudUid) return;
+  if (!cloudReady || !cloudUid || (!cloudAutoSaveEnabled && !force)) return;
   const delay = force ? 0 : Math.max(0, 60000 - (Date.now() - lastCloudWriteAt));
   if (cloudSaveTimer) clearTimeout(cloudSaveTimer);
-  cloudSaveTimer = setTimeout(flushCloudSave, delay);
+  cloudSaveTimer = setTimeout(() => flushCloudSave(force), delay);
 }
 window.addEventListener('game:save-request', event => queueCloudSave(event.detail?.save));
+window.addEventListener('game:cloud-autosave-setting', event => {
+  cloudAutoSaveEnabled = !!event.detail?.enabled;
+  if (cloudSaveTimer) clearTimeout(cloudSaveTimer);
+  cloudSaveTimer = null;
+  if (!cloudAutoSaveEnabled) pendingCloudSave = null;
+  else {
+    try { const local = JSON.parse(localStorage.getItem(GAME_SAVE_KEY) || 'null'); if (local) queueCloudSave(local); } catch {}
+  }
+});
+window.addEventListener('game:manual-cloud-save-request', () => {
+  try { pendingCloudSave = JSON.parse(localStorage.getItem(GAME_SAVE_KEY) || 'null'); } catch { pendingCloudSave = null; }
+  if (pendingCloudSave) queueCloudSave(pendingCloudSave, true);
+  else window.dispatchEvent(new CustomEvent('game:cloud-save-status', { detail: { ok: false, message: 'local-save-not-found' } }));
+});
+window.addEventListener('game:cloud-restore-request', async () => {
+  const user = auth.currentUser;
+  if (!user || user.isAnonymous || user.uid !== cloudUid) {
+    window.dispatchEvent(new CustomEvent('game:cloud-restore-status-result', { detail: { message: 'Сначала войди через Google.' } }));
+    return;
+  }
+  try {
+    const snapshot = await get(ref(database, 'gameSaves/' + user.uid));
+    const save = snapshot.val()?.data;
+    if (!snapshot.exists() || !save || typeof save !== 'object') {
+      window.dispatchEvent(new CustomEvent('game:cloud-restore-status-result', { detail: { message: 'В облаке пока нет сохранения.' } }));
+      return;
+    }
+    window.dispatchEvent(new CustomEvent('game:cloud-restore', { detail: { save, updatedAt: snapshot.val()?.updatedAt || 0 } }));
+  } catch (error) {
+    window.dispatchEvent(new CustomEvent('game:cloud-restore-status-result', { detail: { message: 'Ошибка загрузки из облака: ' + String(error?.code || error?.message || 'Firebase') } }));
+  }
+});
 window.addEventListener('pagehide', () => { if (pendingCloudSave) queueCloudSave(pendingCloudSave, true); });
 
 window.addEventListener('game:position', event => {
@@ -173,7 +207,7 @@ onAuthStateChanged(auth, async user => {
         cloudReady = true;
         if (cloudSaveTimer) clearTimeout(cloudSaveTimer);
         if (cloudSaveInterval) clearInterval(cloudSaveInterval);
-        if (pendingCloudSave) queueCloudSave(pendingCloudSave, !cloudSnapshot.exists());
+        if (pendingCloudSave && cloudAutoSaveEnabled) queueCloudSave(pendingCloudSave);
         cloudSaveInterval = setInterval(flushCloudSave, 60000);
       } catch (error) {
         cloudReady = false;
