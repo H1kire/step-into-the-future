@@ -93,7 +93,7 @@ async function createGroup(){
     const code=randomCode(),groupId=code;
     const data={code,leaderUid:uid,leaderName:profile?.nickname||'Игрок',createdAt:Date.now(),members:{[uid]:{uid,nickname:profile?.nickname||'Игрок',classId:profile?.classId||'',level:profile?.level||1,joinedAt:Date.now()}}};
     await set(ref(db,'groups/'+groupId),data);await set(ref(db,'groupMembers/'+uid),groupId);
-    group={...data,id:groupId};renderGroup();
+    window.dispatchEvent(new Event('game:group-changed'));group={...data,id:groupId};renderGroup();
   }catch(error){message('groupFeedback','Не удалось создать группу: '+(error.code||error.message))}
 }
 async function renderGroup(){
@@ -118,7 +118,7 @@ async function joinGroup(){
   if(!uid)return;const code=$('groupCodeInput').value.trim().toUpperCase();
   try{const gref=ref(db,'groups/'+code);const result=await runTransaction(gref,g=>{if(!g||!g.members||Object.keys(g.members).length>=5||g.members[uid])return;g.members[uid]={uid,nickname:profile?.nickname||'Игрок',classId:profile?.classId||'',level:profile?.level||1,joinedAt:Date.now()};return g});
     if(!result.committed){message('groupFeedback','Такой группы не существует (код недействителен) или она заполнена.');return}
-    await set(ref(db,'groupMembers/'+uid),code);$('groupCodeInput').value='';renderGroup();
+    await set(ref(db,'groupMembers/'+uid),code);window.dispatchEvent(new Event('game:group-changed'));$('groupCodeInput').value='';renderGroup();
   }catch(error){message('groupFeedback','Не удалось вступить: '+(error.code||error.message))}
 }
 async function inviteToGroup(friendUid,nickname){
@@ -130,7 +130,7 @@ async function inviteToGroup(friendUid,nickname){
 }
 async function leaveGroup(){
   const code=group?.code;if(!code)return;
-  try{await update(ref(db,'groups/'+code+'/members'),{[uid]:null});await set(ref(db,'groupMembers/'+uid),null);
+  try{await update(ref(db,'groups/'+code+'/members'),{[uid]:null});await set(ref(db,'groupMembers/'+uid),null);window.dispatchEvent(new Event('game:group-changed'));
     const s=await get(ref(db,'groups/'+code+'/members'));if(!s.exists())await set(ref(db,'groups/'+code),null);
     else if(group.leaderUid===uid){const next=Object.keys(s.val())[0];await update(ref(db,'groups/'+code),{leaderUid:next,leaderName:s.val()[next].nickname})}
     renderGroup();
