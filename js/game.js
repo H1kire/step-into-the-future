@@ -82,12 +82,35 @@ function setupPanels(){
  const finishTouchPanelDrag=e=>{if(touchPanelDrag?.pointerId===e.pointerId){touchPanelDrag.panel.classList.remove('touch-drag-armed');touchPanelDrag=null;lastPanelTap=null;suppressPanelClickUntil=Date.now()+700;setTimeout(()=>{suppressPanelClick=false},700)}else if(lastPanelTap){const tappedPanel=lastPanelTap.panel;tappedPanel.classList.add('touch-drag-armed');clearTimeout(panelTapTimer);panelTapTimer=setTimeout(()=>tappedPanel.classList.remove('touch-drag-armed'),450)}};
  document.addEventListener('pointerup',finishTouchPanelDrag,true);document.addEventListener('pointercancel',finishTouchPanelDrag,true);
  document.addEventListener('click',e=>{if(!suppressPanelClick||Date.now()>suppressPanelClickUntil)return;suppressPanelClick=false;suppressPanelClickUntil=0;e.preventDefault();e.stopPropagation()},true);
+ let desktopPanelDrag=null;
+ document.addEventListener('pointerdown',e=>{
+  if(e.pointerType==='touch'||e.button!==0)return;
+  const panel=e.target.closest('.floating-panel:not(#playerHud):not(.hidden)');if(!panel)return;
+  // Keep controls usable; the rest of the panel surface acts as a drag handle.
+  if(e.target.closest('button,input,textarea,select,a,[contenteditable="true"]'))return;
+  const rect=panel.getBoundingClientRect();panel.style.transform='none';panel.style.left=`${rect.left}px`;panel.style.top=`${rect.top}px`;panel.style.bottom='auto';
+  desktopPanelDrag={panel,pointerId:e.pointerId,offsetX:e.clientX-rect.left,offsetY:e.clientY-rect.top,startX:e.clientX,startY:e.clientY,moved:false};
+  try{panel.setPointerCapture(e.pointerId)}catch{}
+ },true);
+ document.addEventListener('pointermove',e=>{
+  const drag=desktopPanelDrag;if(!drag||e.pointerId!==drag.pointerId)return;
+  if(Math.hypot(e.clientX-drag.startX,e.clientY-drag.startY)>3)drag.moved=true;
+  if(!drag.moved)return;
+  const headerBottom=document.querySelector('header')?.getBoundingClientRect().bottom||0;
+  const left=Math.max(0,Math.min(innerWidth-drag.panel.offsetWidth,e.clientX-drag.offsetX));
+  const top=Math.max(headerBottom,Math.min(innerHeight-40,e.clientY-drag.offsetY));
+  drag.panel.style.left=`${left}px`;drag.panel.style.top=`${top}px`;drag.panel.style.maxHeight=`${Math.max(40,innerHeight-top-8)}px`;
+  e.preventDefault();
+ },true);
+ const finishDesktopPanelDrag=e=>{
+  if(!desktopPanelDrag||desktopPanelDrag.pointerId!==e.pointerId)return;
+  const moved=desktopPanelDrag.moved;desktopPanelDrag=null;
+  if(moved){suppressPanelClick=true;suppressPanelClickUntil=Date.now()+100;setTimeout(()=>{suppressPanelClick=false},100)}
+ };
+ document.addEventListener('pointerup',finishDesktopPanelDrag,true);document.addEventListener('pointercancel',finishDesktopPanelDrag,true);
  window.registerFloatingPanel=panel=>{
-  const bar=panel?.querySelector('.panel-title');if(!bar||panel.dataset.dragHandleInitialized||panel.id==='playerHud')return;
-  panel.dataset.dragHandleInitialized='true';let drag=null;
-  bar.addEventListener('pointerdown',e=>{if(e.target.closest('button'))return;const rect=panel.getBoundingClientRect();panel.style.transform='none';panel.style.left=`${rect.left}px`;panel.style.top=`${rect.top}px`;drag={x:e.clientX-rect.left,y:e.clientY-rect.top};bar.setPointerCapture(e.pointerId)});
-  bar.addEventListener('pointermove',e=>{if(!drag)return;const headerBottom=document.querySelector('header')?.getBoundingClientRect().bottom||0;const left=Math.max(0,Math.min(innerWidth-panel.offsetWidth,e.clientX-drag.x));const top=Math.max(headerBottom,Math.min(innerHeight-40,e.clientY-drag.y));panel.style.left=`${left}px`;panel.style.top=`${top}px`;panel.style.bottom='auto';panel.style.maxHeight=`${Math.max(40,innerHeight-top-8)}px`});
-  bar.addEventListener('pointerup',()=>drag=null);bar.addEventListener('pointercancel',()=>drag=null);
+  if(!panel||panel.id==='playerHud'||panel.dataset.dragHandleInitialized)return;
+  panel.dataset.dragHandleInitialized='true';
  };
  document.querySelectorAll('.floating-panel .panel-title').forEach(bar=>window.registerFloatingPanel(bar.closest('.floating-panel')));
  // Register panels that are added later (for example Friends, Group, Mail and DM).
