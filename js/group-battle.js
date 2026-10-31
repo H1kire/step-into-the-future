@@ -203,7 +203,7 @@ function addEvent(session, text, kind) {
 }
 function processAction(session, uid, action) {
   const member = session.roster?.[uid];
-  if (!member?.stats || member.status !== 'ready') return;
+  if (!member?.stats || member.status !== 'ready' || member.stats.hp <= 0) return;
   const stats = member.stats;
   let text = '';
   if (action.type === 'attack' || action.type === 'ability') {
@@ -282,6 +282,16 @@ async function leaderTick(sessionRef, sessionId) {
   if (session.phase !== 'players') return;
   const uid = session.turnOrder?.[session.turnIndex];
   const action = uid ? session.actions?.[uid] : null;
+  if (uid && session.roster?.[uid]?.status === 'ready' && Number(session.roster?.[uid]?.stats?.hp) <= 0) {
+    await runTransaction(sessionRef, current => {
+      if (!current || current.status !== 'active' || current.phase !== 'players' || current.turnOrder?.[current.turnIndex] !== uid || Number(current.roster?.[uid]?.stats?.hp) > 0) return;
+      if (current.turnIndex + 1 < current.turnOrder.length) current.turnIndex++;
+      else { applyEnemyTurn(current); if (current.status === 'active') addEvent(current, 'Раунд ' + current.round + '. Ходы участников.', 'info'); }
+      current.updatedAt = Date.now();
+      return current;
+    });
+    return;
+  }
   if (!uid || !action || action.round !== session.round) return;
   await runTransaction(sessionRef, current => {
     if (!current || current.status !== 'active' || current.phase !== 'players') return;
@@ -375,7 +385,7 @@ export async function startGroupBattlePage() {
     $('combatMessage').textContent = 'Не удалось подключить группу. Вернись на карту и попробуй снова.';
     return;
   }
-  await sessionApi.joinSession(stored.sessionId);
+  if (initial.status === 'active') await sessionApi.joinSession(stored.sessionId);
 
   const arena = document.querySelector('.arena');
   arena.classList.add('group-arena');
@@ -390,6 +400,7 @@ export async function startGroupBattlePage() {
       '<div class="bar-label"><span>⚔️ Урон</span><b id="groupEnemyAttack"></b></div>' +
       '<div class="bar-label"><span>🛡 Защита</span><b id="groupEnemyDefense"></b></div>' +
     '</section>';
+  try { $('groupEnemySprite').append(createMonsterSprite(initial.enemy.imageKey || 'slime', 3)); } catch {}
   $('playerLevelTop').textContent = 'Групповой бой';
   $('turnTrack').innerHTML = '<div class="turn-step active" id="groupRoundStep"><span>1</span><b>Подготовка</b></div><span class="turn-arrow">→</span><div class="turn-step" id="groupEnemyStep"><span>2</span><b>Атака монстра</b></div>';
   const note = (message, kind) => {
@@ -530,20 +541,32 @@ export async function startGroupBattlePage() {
   applySnapshot(initial);
 }
 
+let groupBattleApi = null;
+let groupBattleInit = null;
+async function connectGroupBattle() {
+  if (groupBattleApi?.enabled) return groupBattleApi;
+  if (groupBattleInit) return groupBattleInit;
+  groupBattleInit = initializeGroupBattle({ onError: error => console.error('Group battle connection failed', error) })
+    .then(api => { if (api.enabled) groupBattleApi = api; return api; })
+    .finally(() => { groupBattleInit = null; });
+  return groupBattleInit;
+}
 if (typeof window !== 'undefined') {
-  initializeGroupBattle({ onError: error => console.error('Group battle connection failed', error) })
-    .then(api => {
-      if (api.enabled) {
-        window.startGroupBattleForEnemy = async enemy => {
-          if (!enemy?.elite || !api.isLeader) return false;
-          const session = await api.createSession(enemy);
-          if (!session) return false;
-          localStorage.setItem(SESSION_KEY, JSON.stringify({ groupId: api.groupId, sessionId: session.sessionId }));
-          localStorage.setItem(ACTIVE_KEY, String(enemy.id));
-          window.location.href = './battle.html';
-          return true;
-        };
-      }
-    })
-    .catch(error => console.error('Group battle initialization failed', error));
+  window.startGroupBattleForEnemy = async enemy => {
+    if (!enemy?.elite) return false;
+    const api = await connectGroupBattle();
+    if (!api.enabled || !api.isLeader) return false;
+    const session = await api.createSession(enemy);
+    if (!session) return false;
+    localStorage.setItem(SESSION_KEY, JSON.stringify({ groupId: api.groupId, sessionId: session.sessionId }));
+    localStorage.setItem(ACTIVE_KEY, String(enemy.id));
+    window.location.href = './battle.html';
+    return true;
+  };
+  window.addEventListener('game:group-changed', () => {
+    if (groupBattleApi) groupBattleApi.close();
+    groupBattleApi = null;
+    connectGroupBattle().catch(error => console.error('Group battle reconnect failed', error));
+  });
+  connectGroupBattle().catch(error => console.error('Group battle initialization failed', error));
 }
