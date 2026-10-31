@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Пиксельный мир — тестовая галерея</title>
+  <link rel="stylesheet" href="./css/pixel-world-preview.css?v=pixel-atlas-4">
+</head>
+<body>
+  <header class="topbar">
+    <div><p class="eyebrow">ГОРОДСКИЕ СТРАННИКИ · DEV BUILD</p><h1>Пиксельный мир</h1><p class="subtitle">Новый набор пиксельной графики: компактные герои и монстры, фактурные тайлы травы, леса, песка, берега, воды и камня.</p></div>
+    <a href="./index.html">Вернуться в игру ↗</a>
+  </header>
+  <main>
+    <section class="panel gallery-panel">
+      <div class="section-heading"><div><h2>Герои · 5 классов</h2><p>У каждого класса свой цвет, экипировка и читаемый силуэт.</p></div><span class="tag">Оригинальные спрайты</span></div>
+      <div id="characterGallery" class="character-gallery"></div>
+    </section>
+    <section class="panel gallery-panel">
+      <div class="section-heading"><div><h2>Монстры · 9 видов</h2><p>От простых противников до более опасных существ. Спрайты загружаются из атласов PNG и используются в самой игре.</p></div><span class="tag">9 видов</span></div>
+      <div id="monsterGallery" class="character-gallery monster-gallery"></div>
+    </section>
+    <section class="panel gallery-panel">
+      <div class="section-heading"><div><h2>NPC · жители мира</h2><p>Торговец, священник и кузнец — с разными цветами одежды и аксессуарами.</p></div><span class="tag">3 персонажа</span></div>
+      <div id="npcGallery" class="character-gallery npc-gallery"></div>
+    </section>
+    <section class="panel world-panel">
+      <div class="section-heading"><div><h2>Процедурный мир 100 000 × 100 000</h2><p>Текстурные тайлы травы, леса, воды, песка, берегов и камня; чанки подгружаются вокруг камеры.</p></div><span class="tag" id="chunkStatus">Чанки: —</span></div>
+      <div class="world-toolbar">
+        <label>Персонаж <select id="characterSelect"><option value="adventurer">Странник</option><option value="warrior">Воин</option><option value="archer">Лучник</option><option value="mage">Маг</option><option value="classless">Без класса</option></select></label>
+        <label>Масштаб <select id="zoomSelect"><option value="1">1×</option><option value="1.5" selected>1,5×</option><option value="2">2×</option><option value="3">3×</option></select></label>
+        <button id="centerWorld" type="button">К персонажу</button><button id="regenWorld" type="button">Новый seed</button>
+      </div>
+      <div class="canvas-frame"><canvas id="worldCanvas" aria-label="Интерактивная пиксельная карта"></canvas><div class="world-hint">Клик — идти · WASD / стрелки — двигаться · колёсико — масштаб</div></div>
+      <div class="world-readout"><span id="worldCoords">X: 50 000 · Y: 50 000</span><span>Карта: 100 000 × 100 000 px</span><span id="worldSeed">Seed: —</span></div>
+      <div class="legend"><span><i class="grass"></i> Трава</span><span><i class="forest"></i> Лес</span><span><i class="sand"></i> Песок</span><span><i class="water"></i> Вода</span><span><i class="stone"></i> Камни</span></div>
+    </section>
+    <section class="panel architecture">
+      <h2>Что уже есть в прототипе</h2>
+      <ul><li>5 классов героя, 9 видов монстров и 3 NPC с оригинальными процедурными спрайтами.</li><li>Контрастные силуэты, цветовые акценты, тени и блики для читаемости на маленьком масштабе.</li><li>Процедурная генерация ландшафта и подгрузка чанков рядом с камерой.</li><li>Перемещение по клику и с клавиатуры без GPS и без реальной ходьбы.</li></ul>
+      <p class="note">Это тестовая ветка разработки. В main ничего не переносится, пока ты сам не скажешь.</p>
+    </section>
+  </main>
+  <script type="module" src="./js/pixel-world/sprite-preview.js?v=pixel-atlas-4"></script>
+</body>
+</html>

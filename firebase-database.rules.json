@@ -29,7 +29,9 @@
     },
     "chatMessages": {
       ".read": "auth != null",
-      ".indexOn": ["createdAt"],
+      ".indexOn": [
+        "createdAt"
+      ],
       "$messageId": {
         ".write": "auth != null && ((!data.exists() && newData.child('uid').val() === auth.uid) || (data.exists() && !newData.exists() && now - data.child('createdAt').val() >= 600000))",
         ".validate": "newData.hasChildren(['uid', 'name', 'text', 'lat', 'lng', 'createdAt'])",
@@ -69,6 +71,46 @@
         },
         "lng": {
           ".validate": "newData.isNumber() && newData.val() >= -180 && newData.val() <= 180"
+        },
+        "updatedAt": {
+          ".validate": "newData.isNumber()"
+        },
+        "$other": {
+          ".validate": false
+        }
+      }
+    },
+    "gameSaves": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        ".write": "auth != null && auth.uid === $uid",
+        ".validate": "newData.hasChildren(['data', 'updatedAt'])",
+        "data": {
+          ".validate": "newData.hasChildren(['state', 'monsters'])",
+          "state": {
+            ".validate": "newData.hasChildren(['level', 'hp', 'maxHp', 'energy', 'maxEnergy'])",
+            "level": {
+              ".validate": "newData.isNumber() && newData.val() >= 1 && newData.val() <= 100000"
+            },
+            "hp": {
+              ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 1000000000"
+            },
+            "maxHp": {
+              ".validate": "newData.isNumber() && newData.val() >= 1 && newData.val() <= 1000000000"
+            },
+            "energy": {
+              ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 1000000000"
+            },
+            "maxEnergy": {
+              ".validate": "newData.isNumber() && newData.val() >= 1 && newData.val() <= 1000000000"
+            }
+          },
+          "monsters": {
+            ".validate": "newData.hasChildren() || !newData.exists()"
+          },
+          "$other": {
+            ".validate": true
+          }
         },
         "updatedAt": {
           ".validate": "newData.isNumber()"

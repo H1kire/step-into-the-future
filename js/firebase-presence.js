@@ -7,10 +7,71 @@ import { firebaseConfig, appCheckSiteKey, developerUid } from './firebase-config
 
 const onlineStatus = document.getElementById('onlineStatus');
 let lastPosition = null, lastSentAt = 0, currentPlayerRef = null, unsubscribePlayers = null, unsubscribeProfile = null, unsubscribeChat = null, chatCleanupTimer = null, cleanupRunning = false, chatName = 'Странник', lastChatSentAt = 0;
+let cloudUid = null, cloudReady = false, pendingCloudSave = null, cloudSaveTimer = null, cloudSaveInterval = null, lastCloudWriteAt = 0;
+let cloudAutoSaveEnabled = true;
+try { cloudAutoSaveEnabled = localStorage.getItem('game-cloud-autosave-v1') !== 'false'; } catch {}
 const app = initializeApp(firebaseConfig);
 if (appCheckSiteKey) initializeAppCheck(app, { provider: new ReCaptchaV3Provider(appCheckSiteKey), isTokenAutoRefreshEnabled: true });
 const auth = getAuth(app);
 const database = getDatabase(app);
+const GAME_SAVE_KEY = 'gorodskie-stranniki-save-v1';
+async function flushCloudSave(force = false) {
+  const user = auth.currentUser;
+  if (!cloudReady || !user || user.isAnonymous || user.uid !== cloudUid || !pendingCloudSave || (!cloudAutoSaveEnabled && !force)) return;
+  const snapshot = pendingCloudSave; pendingCloudSave = null;
+  try {
+    const data = { ...snapshot, lastSimulationAt: Date.now() };
+    await set(ref(database, 'gameSaves/' + user.uid), { data, updatedAt: serverTimestamp() });
+    lastCloudWriteAt = Date.now();
+    window.dispatchEvent(new CustomEvent('game:cloud-save-status', { detail: { ok: true, at: lastCloudWriteAt } }));
+  } catch (error) {
+    pendingCloudSave = snapshot;
+    window.dispatchEvent(new CustomEvent('game:cloud-save-status', { detail: { ok: false, message: String(error?.code || error?.message || 'Firebase') } }));
+    console.error('Firebase game save failed', error);
+  }
+}
+function queueCloudSave(save, force = false) {
+  if (!save || typeof save !== 'object') return;
+  pendingCloudSave = save;
+  if (!cloudReady || !cloudUid || (!cloudAutoSaveEnabled && !force)) return;
+  const delay = force ? 0 : Math.max(0, 60000 - (Date.now() - lastCloudWriteAt));
+  if (cloudSaveTimer) clearTimeout(cloudSaveTimer);
+  cloudSaveTimer = setTimeout(() => flushCloudSave(force), delay);
+}
+window.addEventListener('game:save-request', event => queueCloudSave(event.detail?.save));
+window.addEventListener('game:cloud-autosave-setting', event => {
+  cloudAutoSaveEnabled = !!event.detail?.enabled;
+  if (cloudSaveTimer) clearTimeout(cloudSaveTimer);
+  cloudSaveTimer = null;
+  if (!cloudAutoSaveEnabled) pendingCloudSave = null;
+  else {
+    try { const local = JSON.parse(localStorage.getItem(GAME_SAVE_KEY) || 'null'); if (local) queueCloudSave(local); } catch {}
+  }
+});
+window.addEventListener('game:manual-cloud-save-request', () => {
+  try { pendingCloudSave = JSON.parse(localStorage.getItem(GAME_SAVE_KEY) || 'null'); } catch { pendingCloudSave = null; }
+  if (pendingCloudSave) queueCloudSave(pendingCloudSave, true);
+  else window.dispatchEvent(new CustomEvent('game:cloud-save-status', { detail: { ok: false, message: 'local-save-not-found' } }));
+});
+window.addEventListener('game:cloud-restore-request', async () => {
+  const user = auth.currentUser;
+  if (!user || user.isAnonymous || user.uid !== cloudUid) {
+    window.dispatchEvent(new CustomEvent('game:cloud-restore-status-result', { detail: { message: 'Сначала войди через Google.' } }));
+    return;
+  }
+  try {
+    const snapshot = await get(ref(database, 'gameSaves/' + user.uid));
+    const save = snapshot.val()?.data;
+    if (!snapshot.exists() || !save || typeof save !== 'object') {
+      window.dispatchEvent(new CustomEvent('game:cloud-restore-status-result', { detail: { message: 'В облаке пока нет сохранения.' } }));
+      return;
+    }
+    window.dispatchEvent(new CustomEvent('game:cloud-restore', { detail: { save, updatedAt: snapshot.val()?.updatedAt || 0 } }));
+  } catch (error) {
+    window.dispatchEvent(new CustomEvent('game:cloud-restore-status-result', { detail: { message: 'Ошибка загрузки из облака: ' + String(error?.code || error?.message || 'Firebase') } }));
+  }
+});
+window.addEventListener('pagehide', () => { if (pendingCloudSave) queueCloudSave(pendingCloudSave, true); });
 
 window.addEventListener('game:position', event => {
   const { lat, lng, name } = event.detail || {};
@@ -25,13 +86,14 @@ function publishPosition() {
   if (wait > 0) { setTimeout(publishPosition, wait); return; }
   lastSentAt = Date.now();
   set(currentPlayerRef, { ...lastPosition, updatedAt: Date.now() })
-    .catch(error => { onlineStatus.textContent = 'Онлайн: ошибка записи'; console.error('Firebase presence write failed', error); });
+    .catch(error => { if (onlineStatus) onlineStatus.textContent = 'Онлайн: ошибка записи'; console.error('Firebase presence write failed', error); });
 }
 setInterval(() => { if (!document.hidden) publishPosition(); }, 10000);
 document.addEventListener('visibilitychange', () => { if (!document.hidden) publishPosition(); });
 
 function dispatchAccount(user, profile) {
   if (!user || user.isAnonymous) {
+    cloudUid = null; cloudReady = false; pendingCloudSave = null; if (cloudSaveTimer) clearTimeout(cloudSaveTimer); if (cloudSaveInterval) clearInterval(cloudSaveInterval); cloudSaveTimer = null; cloudSaveInterval = null;
     window.dispatchEvent(new CustomEvent('firebase:auth', { detail: { uid: '', profile: null } }));
     return;
   }
@@ -73,7 +135,7 @@ function watchProfile(user) {
   unsubscribeProfile = onValue(profileRef, snapshot => {
     if (snapshot.exists()) { chatName = snapshot.val().nickname || `user${snapshot.val().accountNumber}`; if (lastPosition) lastPosition.name = chatName; dispatchAccount(user, snapshot.val()); publishPosition(); }
   }, error => {
-    onlineStatus.textContent = 'Аккаунт: не удалось загрузить профиль';
+    if (onlineStatus) onlineStatus.textContent = 'Аккаунт: не удалось загрузить профиль';
     console.error('Firebase profile read failed', error);
   });
 }
@@ -131,9 +193,30 @@ onAuthStateChanged(auth, async user => {
       if (lastPosition) lastPosition.name = chatName;
       dispatchAccount(user, profile);
       watchProfile(user);
+      cloudUid = user.uid; cloudReady = false;
+      try {
+        const cloudSnapshot = await get(ref(database, 'gameSaves/' + user.uid));
+        if (cloudSnapshot.exists() && cloudSnapshot.val()?.data && typeof cloudSnapshot.val().data === 'object') {
+          window.dispatchEvent(new CustomEvent('game:cloud-load', { detail: { save: cloudSnapshot.val().data, updatedAt: cloudSnapshot.val().updatedAt || 0 } }));
+          pendingCloudSave = null; lastCloudWriteAt = Date.now();
+        } else {
+          let localSave = null;
+          try { localSave = JSON.parse(localStorage.getItem(GAME_SAVE_KEY) || 'null'); } catch {}
+          if (localSave) pendingCloudSave = localSave;
+        }
+        cloudReady = true;
+        if (cloudSaveTimer) clearTimeout(cloudSaveTimer);
+        if (cloudSaveInterval) clearInterval(cloudSaveInterval);
+        if (pendingCloudSave && cloudAutoSaveEnabled) queueCloudSave(pendingCloudSave);
+        cloudSaveInterval = setInterval(() => flushCloudSave(), 60000);
+      } catch (error) {
+        cloudReady = false;
+        if (onlineStatus) onlineStatus.textContent = 'Облако: ошибка загрузки';
+        console.error('Firebase cloud save load failed', error);
+      }
     } catch (error) {
       dispatchAccount(user, null);
-      onlineStatus.textContent = 'Аккаунт: обнови Rules базы Firebase';
+      if (onlineStatus) onlineStatus.textContent = 'Аккаунт: обнови Rules базы Firebase';
       console.error('Firebase profile setup failed', error);
     }
   }
@@ -146,18 +229,18 @@ onAuthStateChanged(auth, async user => {
   unsubscribePlayers = onValue(ref(database, 'players'), snapshot => {
     window.dispatchEvent(new CustomEvent('firebase:players', { detail: snapshot.val() || {} }));
   }, error => {
-    onlineStatus.textContent = 'Онлайн: нет доступа к игрокам';
+    if (onlineStatus) onlineStatus.textContent = 'Онлайн: нет доступа к игрокам';
     console.error('Firebase players read failed', error);
   });
   onValue(ref(database, '.info/connected'), snapshot => {
     const connected = snapshot.val() === true;
     window.dispatchEvent(new CustomEvent('firebase:chat-status', { detail: { connected } }));
-    if (!connected) { onlineStatus.textContent = 'Онлайн: переподключение…'; return; }
+    if (!connected) { if (onlineStatus) onlineStatus.textContent = 'Онлайн: переподключение…'; return; }
     onDisconnect(currentPlayerRef).remove().then(() => {
-      onlineStatus.textContent = 'Онлайн: подключено';
+      if (onlineStatus) onlineStatus.textContent = 'Онлайн: подключено';
       publishPosition();
     }).catch(error => {
-      onlineStatus.textContent = 'Онлайн: ошибка настройки';
+      if (onlineStatus) onlineStatus.textContent = 'Онлайн: ошибка настройки';
       console.error('Firebase disconnect cleanup failed', error);
     });
   });
@@ -187,7 +270,7 @@ async function connectGoogleAccount() {
 
 function showAuthError(error) {
   const code = String(error?.code || 'unknown');
-  onlineStatus.textContent = code === 'auth/operation-not-allowed'
+  if (onlineStatus) onlineStatus.textContent = code === 'auth/operation-not-allowed'
     ? 'Google-вход выключен в Firebase Authentication'
     : code === 'auth/unauthorized-domain'
       ? 'Добавь домен сайта в Firebase Authentication → Settings'
