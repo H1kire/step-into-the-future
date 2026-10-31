@@ -126,3 +126,26 @@ header{position:fixed;inset:0 0 auto;height:calc(58px + env(safe-area-inset-top,
 /* Static rarity-colored neon halo for elite enemies on the map. */
 .elite-monster-marker{position:relative;display:grid;place-items:center;width:38px;height:38px;border:2px solid var(--elite-color);border-radius:50%;background:#101820;box-shadow:0 0 0 3px color-mix(in srgb,var(--elite-color) 35%,transparent),0 0 18px color-mix(in srgb,var(--elite-color) 78%,transparent),inset 0 0 12px color-mix(in srgb,var(--elite-color) 30%,transparent);font-size:23px;filter:saturate(1.1)}
 .elite-monster-tooltip{border:1px solid var(--elite-color,#d8e0e8)!important;box-shadow:0 0 12px color-mix(in srgb,var(--elite-color,#d8e0e8) 40%,transparent)!important;font-weight:800}
+
+/* Social panels */
+.social-menu-buttons{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-top:7px}
+.social-menu-buttons button{min-width:0;padding:8px 4px;font-size:12px;white-space:nowrap}
+.social-panel{width:min(430px,calc(100vw - 20px));max-height:72dvh;overflow:auto}
+.social-content{display:flex;flex-direction:column;gap:10px}
+.social-content label{display:flex;flex-direction:column;gap:5px;font-size:12px;color:var(--muted)}
+.social-content input{width:100%;min-width:0;padding:10px;border:1px solid #40536a;border-radius:9px;background:#10151d;color:var(--text)}
+.social-tabs{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.social-tabs .active{outline:2px solid var(--green)}
+.social-feedback{min-height:18px;font-size:12px;color:var(--gold)}
+.friend-row,.mail-row,.group-slot{padding:10px;background:var(--panel2);border:1px solid #40536a;border-radius:10px;margin:6px 0}
+.friend-main{display:flex;flex-direction:column;gap:3px}.friend-main span,.mail-row small{font-size:11px;color:var(--muted)}
+.friend-actions{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px}.friend-actions button{padding:8px 5px;font-size:11px}
+.group-heading{font-size:15px;margin-bottom:8px}.group-code{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--muted);margin:8px 0}
+.tiny-copy{padding:3px 6px!important;font-size:12px!important;line-height:1}
+.group-slots{display:grid;gap:5px}.social-separator{text-align:center;color:var(--muted);font-size:12px}
+.mail-actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px}.mail-actions button{padding:8px 3px;font-size:10px}
+.mail-row{display:flex;flex-direction:column;gap:7px;font-size:12px}.mail-row button{padding:8px;font-size:11px}
+.dm-messages{height:min(42dvh,320px);overflow:auto;background:#10151d;border-radius:9px;padding:8px}
+.dm-messages p{font-size:12px;padding:7px;background:var(--panel2);border-radius:8px;margin:5px 0;overflow-wrap:anywhere}
+.dm-messages p.mine{border:1px solid #47776d}
+@media(max-width:780px){.social-panel{max-height:58dvh;width:min(430px,calc(100vw - 16px))}.social-menu-buttons{gap:4px}.social-menu-buttons button{font-size:10px;padding:8px 2px}.friend-actions button{font-size:10px}.mail-actions button{font-size:9px}}
