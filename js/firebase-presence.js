@@ -381,7 +381,15 @@ async function saveNickname() {
     const indexResult = await runTransaction(indexRef, current => current === null || current === user.uid ? user.uid : undefined);
     if (!indexResult.committed) { feedback.textContent = 'Этот никнейм уже занят.'; return; }
     step = 'запись ника в Firebase';
-    await update(profileRef, { nickname, nicknameChangedAt: serverTimestamp() });
+    try {
+      await update(profileRef, { nickname, nicknameChangedAt: serverTimestamp() });
+    } catch (error) {
+      // Do not leave a newly reserved nickname behind when the profile write fails.
+      if (nicknameKey !== String(profile.nickname || '').toLocaleLowerCase()) {
+        await runTransaction(indexRef, current => current === user.uid ? null : current);
+      }
+      throw error;
+    }
     const oldKey = String(profile.nickname || '').toLocaleLowerCase();
     if (oldKey && oldKey !== nicknameKey) { const oldIndex = ref(database, 'nicknameIndex/' + oldKey); await runTransaction(oldIndex, current => current === user.uid ? null : current); }
     setNicknameEditor(false);
