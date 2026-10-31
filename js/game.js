@@ -85,6 +85,8 @@ function setupPanels(){
  let desktopPanelDrag=null;
  document.addEventListener('pointerdown',e=>{
   if(e.pointerType==='touch'||e.button!==0)return;
+  // The ability-tree graph has its own pan/zoom gestures; never drag its parent panel from inside it.
+  if(e.target.closest('.ability-graph-scroll,#treeZoomToolbar'))return;
   const panel=e.target.closest('.floating-panel:not(#playerHud):not(.hidden)');if(!panel)return;
   // Keep controls usable; the rest of the panel surface acts as a drag handle.
   if(e.target.closest('button,input,textarea,select,a,[contenteditable="true"]'))return;
