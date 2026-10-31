@@ -164,8 +164,12 @@ async function ensureAccountProfile(user) {
     if (!profile.createdAt) updates.createdAt = Date.now();
     if (profile.nicknameChangedAt == null) updates.nicknameChangedAt = 0;
     if (Object.keys(updates).length) {
+      const oldNicknameKey = String(profile.nickname || '').toLocaleLowerCase();
       await update(userProfileRef, updates);
       profile = { ...profile, ...updates };
+      if (oldNicknameKey && oldNicknameKey !== defaultNickname.toLocaleLowerCase()) {
+        await runTransaction(ref(database, 'nicknameIndex/' + oldNicknameKey), current => current === user.uid ? null : current);
+      }
     }
   }
 
