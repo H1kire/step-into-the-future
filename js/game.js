@@ -213,6 +213,7 @@ function openItemDetails(item,equipped=false){
 }
 function syncPeer(){if(channel&&gpsAllowed&&gpsPositionReady)channel.postMessage({type:'presence',id:playerId,pos,name:'Странник',at:Date.now()})}
 function syncOnline(){if(gpsAllowed&&gpsPositionReady)window.dispatchEvent(new CustomEvent('game:position',{detail:{lat:pos[0],lng:pos[1],name:'Странник'}}))}
+window.addEventListener('firebase:request-position',syncOnline);
 if(channel)channel.onmessage=e=>{const m=e.data;if(!m||m.id===playerId)return;if(m.type==='presence'){peers[m.id]=m;if(map.distance(pos,m.pos)<=1000){if(!peerMarkers[m.id])peerMarkers[m.id]=L.marker(m.pos,{icon:L.divIcon({className:'',html:'<div class="marker youmarker">🧝</div>',iconSize:[42,42],iconAnchor:[21,21]})}).addTo(map).bindPopup(m.name);else peerMarkers[m.id].setLatLng(m.pos)}else if(peerMarkers[m.id]){map.removeLayer(peerMarkers[m.id]);delete peerMarkers[m.id]}renderChatPeers()}};
 let chatConnected=false,chatFeedback='';
 window.addEventListener('firebase:chat',event=>{const m=event.detail;if(!m||!Number.isFinite(m.lat)||!Number.isFinite(m.lng)||!Number.isFinite(m.createdAt)||Date.now()-m.createdAt>=600000||!m.id||seenChatIds.has(m.id))return;seenChatIds.add(m.id);if(seenChatIds.size>300)seenChatIds.delete(seenChatIds.values().next().value);if(m.uid===window.firebasePlayerUid)addChat(`Ты: ${String(m.text||'').slice(0,180)}`);else if(map.distance(pos,[m.lat,m.lng])<=150)addChat(`${String(m.name||'Игрок').slice(0,24)}: ${String(m.text||'').slice(0,180)}`)});
