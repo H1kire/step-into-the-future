@@ -51,18 +51,23 @@ window.addEventListener('game:cloud-autosave-setting', event => {
 window.addEventListener('game:manual-cloud-save-request', async () => {
   const user = auth.currentUser;
   if (!user || user.isAnonymous) { window.dispatchEvent(new CustomEvent('game:cloud-save-status', { detail: { ok: false, message: 'Сначала войди через Google.' } })); return; }
-  if (!cloudReady || cloudUid !== user.uid) { window.dispatchEvent(new CustomEvent('game:cloud-save-status', { detail: { ok: false, message: 'Облачное хранилище ещё подключается. Подожди несколько секунд и повтори.' } })); return; }
+  if (!cloudReady || cloudUid !== user.uid) { cloudUid = user.uid; cloudReady = true; }
   let snapshot = null;
   try { snapshot = JSON.parse(localStorage.getItem(GAME_SAVE_KEY) || 'null'); } catch {}
   if (!snapshot || typeof snapshot !== 'object') { window.dispatchEvent(new CustomEvent('game:cloud-save-status', { detail: { ok: false, message: 'Локальное сохранение не найдено.' } })); return; }
-  pendingCloudSave = snapshot;
-  if (cloudSaveTimer) clearTimeout(cloudSaveTimer);
-  cloudSaveTimer = null;
-  await flushCloudSave(true);
+  try {
+    await set(ref(database, 'gameSaves/' + user.uid), { data: { ...snapshot, lastSimulationAt: Date.now() }, updatedAt: serverTimestamp() });
+    lastCloudWriteAt = Date.now();
+    pendingCloudSave = null;
+    window.dispatchEvent(new CustomEvent('game:cloud-save-status', { detail: { ok: true, at: lastCloudWriteAt } }));
+  } catch (error) {
+    window.dispatchEvent(new CustomEvent('game:cloud-save-status', { detail: { ok: false, message: String(error?.code || error?.message || 'Firebase') } }));
+    console.error('Firebase manual cloud save failed', error);
+  }
 });
 window.addEventListener('game:cloud-restore-request', async () => {
   const user = auth.currentUser;
-  if (!user || user.isAnonymous || user.uid !== cloudUid) {
+  if (!user || user.isAnonymous) {
     window.dispatchEvent(new CustomEvent('game:cloud-restore-status-result', { detail: { message: 'Сначала войди через Google.' } }));
     return;
   }
@@ -119,24 +124,58 @@ function dispatchAccount(user, profile) {
 async function ensureAccountProfile(user) {
   const userProfileRef = ref(database, `profiles/${user.uid}`);
   const existing = await get(userProfileRef);
-  if (existing.exists()) { const profile = existing.val(); const key = String(profile.nickname || '').toLocaleLowerCase(); if (key) await runTransaction(ref(database, 'nicknameIndex/' + key), current => current || user.uid); return profile; }
+  let profile = existing.val() || null;
+  let accountNumber = Number.isSafeInteger(profile?.accountNumber) && profile.accountNumber > 0 ? profile.accountNumber : 0;
 
-  // This client-side counter assigns a display number when someone first enters the game.
-  const counterResult = await runTransaction(ref(database, 'accountCounter'), value => (Number.isSafeInteger(value) && value >= 0 ? value : 0) + 1);
-  if (!counterResult.committed) throw new Error('Не удалось получить номер аккаунта');
-  const accountNumber = counterResult.snapshot.val();
+  if (!accountNumber) {
+    // Seed the global sequence from the number of existing profiles and the
+    // largest number already assigned, then allocate atomically.
+    const profilesSnapshot = await get(ref(database, 'profiles'));
+    let existingCount = 0, highestAssigned = 0;
+    profilesSnapshot.forEach(child => {
+      existingCount++;
+      const n = Number(child.val()?.accountNumber);
+      if (Number.isSafeInteger(n) && n > highestAssigned) highestAssigned = n;
+    });
+    const counterResult = await runTransaction(ref(database, 'accountCounter'), value =>
+      Math.max(Number.isSafeInteger(value) && value >= 0 ? value : 0, existingCount, highestAssigned) + 1
+    );
+    if (!counterResult.committed) throw new Error('Не удалось получить глобальный номер аккаунта');
+    accountNumber = counterResult.snapshot.val();
+  }
+
+  const defaultNickname = `User${accountNumber}`;
   const initialProfile = {
     accountNumber,
-    nickname: `user${accountNumber}`,
+    nickname: defaultNickname,
     createdAt: Date.now(),
     nicknameChangedAt: 0
   };
-  const profileResult = await runTransaction(userProfileRef, current => current || initialProfile);
-  await runTransaction(ref(database, 'nicknameIndex/' + initialProfile.nickname.toLocaleLowerCase()), current => current || user.uid);
-  if (!profileResult.committed) throw new Error('Не удалось создать профиль аккаунта');
-  return profileResult.snapshot.val();
-}
 
+  if (!profile) {
+    const profileResult = await runTransaction(userProfileRef, current => current || initialProfile);
+    if (!profileResult.committed) throw new Error('Не удалось создать профиль аккаунта');
+    profile = profileResult.snapshot.val();
+  } else {
+    const updates = {};
+    if (!Number.isSafeInteger(profile.accountNumber) || profile.accountNumber <= 0) updates.accountNumber = accountNumber;
+    // Standardize every returning account to its permanent global User<number> name.
+    if (profile.nickname !== defaultNickname) updates.nickname = defaultNickname;
+    if (!profile.createdAt) updates.createdAt = Date.now();
+    if (profile.nicknameChangedAt == null) updates.nicknameChangedAt = 0;
+    if (Object.keys(updates).length) {
+      await update(userProfileRef, updates);
+      profile = { ...profile, ...updates };
+    }
+  }
+
+  const nicknameKey = defaultNickname.toLocaleLowerCase();
+  const indexResult = await runTransaction(ref(database, 'nicknameIndex/' + nicknameKey), current =>
+    current === null || current === user.uid ? user.uid : undefined
+  );
+  if (!indexResult.committed) throw new Error(`Не удалось зарезервировать ник ${defaultNickname}`);
+  return profile;
+}
 function watchProfile(user) {
   if (unsubscribeProfile) unsubscribeProfile();
   const profileRef = ref(database, `profiles/${user.uid}`);
@@ -193,14 +232,13 @@ onAuthStateChanged(auth, async user => {
     return;
   }
   window.firebasePlayerUid = user.uid;
+  if (!user.isAnonymous) { cloudUid = user.uid; cloudReady = true; window.dispatchEvent(new CustomEvent('game:cloud-ready', { detail: { uid: user.uid } })); }
   if (user.isAnonymous) { chatName = 'Странник'; dispatchAccount(user, null); }
   else {
     try {
       const profile = await ensureAccountProfile(user);
       chatName = profile.nickname || `user${profile.accountNumber}`;
       if (lastPosition) lastPosition.name = chatName;
-      cloudUid = user.uid; cloudReady = true;
-      window.dispatchEvent(new CustomEvent('game:cloud-ready', { detail: { uid: user.uid } }));
       dispatchAccount(user, profile);
       watchProfile(user);
       try {
@@ -224,6 +262,8 @@ onAuthStateChanged(auth, async user => {
         console.error('Firebase cloud save load failed', error);
       }
     } catch (error) {
+      cloudUid = user.uid; cloudReady = true;
+      window.dispatchEvent(new CustomEvent('game:cloud-ready', { detail: { uid: user.uid } }));
       dispatchAccount(user, null);
       if (onlineStatus) onlineStatus.textContent = 'Аккаунт: обнови Rules базы Firebase';
       console.error('Firebase profile setup failed', error);
