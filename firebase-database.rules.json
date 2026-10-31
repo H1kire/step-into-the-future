@@ -137,7 +137,7 @@
     "groups": {
       ".read": "auth != null",
       "$groupId": {
-        ".write": "auth != null",
+        ".write": "auth != null && ((!data.exists() && newData.child('leaderUid').val() === auth.uid) || data.child('leaderUid').val() === auth.uid || (data.child('members').child(auth.uid).exists() && !newData.child('members').child(auth.uid).exists()))",
         "members": {
           ".validate": "newData.numChildren() <= 5"
         }
@@ -153,7 +153,7 @@
       ".read": "auth != null",
       "$uid": {
         ".read": "auth != null && auth.uid === $uid",
-        ".write": "auth != null"
+        ".write": "auth != null && (auth.uid === $uid || (!data.exists() && newData.child('fromUid').val() === auth.uid))"
       }
     },
     "directMessages": {
