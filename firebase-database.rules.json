@@ -3,12 +3,12 @@
     "accountCounter": {
       ".read": "auth != null",
       ".write": "auth != null",
-      ".validate": "newData.isNumber() && ((data.exists() && newData.val() === data.val() + 1) || (!data.exists() && newData.val() === 1))"
+      ".validate": "newData.isNumber() && ((data.exists() && newData.val() === data.val() + 1) || (!data.exists() && newData.val() >= 1))"
     },
     "profiles": {
       "$uid": {
         ".read": "auth != null && auth.uid === $uid",
-        ".write": "auth != null && auth.uid === $uid && (!data.exists() || newData.child('nickname').val() === data.child('nickname').val() || now - data.child('nicknameChangedAt').val() >= 86400000)",
+        ".write": "auth != null && auth.uid === $uid && (!data.exists() || newData.child('nickname').val() === data.child('nickname').val() || newData.child('nickname').val() === ('User' + newData.child('accountNumber').val()) || now - data.child('nicknameChangedAt').val() >= 86400000)",
         ".validate": "newData.hasChildren(['accountNumber', 'nickname', 'createdAt', 'nicknameChangedAt'])",
         "accountNumber": {
           ".validate": "newData.isNumber() && newData.val() > 0 && (!data.exists() || newData.val() === data.val())"
