@@ -147,12 +147,12 @@ async function renderMail(){
 }
 async function mailAction(action){if(!uid)return;const s=await get(ref(db,'mail/'+uid));const updates={};s.forEach(child=>updates[child.key]=action==='read'?{...child.val(),read:true}:null);await update(ref(db,'mail/'+uid),updates);renderMail()}
 async function watchDm(){
-  if(!uid||!activeDm)return;const key=[uid,activeDm].sort().join('_');const s=await get(ref(db,'directMessages/'+key));const box=$('dmMessages');box.replaceChildren();
+  if(!uid||!activeDm)return;const s=await get(ref(db,'directMessages/'+uid+'/'+activeDm));const box=$('dmMessages');box.replaceChildren();
   s.forEach(child=>appendDm(child.val()));
-  if(unsubscribers.dm)unsubscribers.dm();unsubscribers.dm=onValue(ref(db,'directMessages/'+key),snap=>{box.replaceChildren();snap.forEach(child=>appendDm(child.val()))});
+  if(unsubscribers.dm)unsubscribers.dm();unsubscribers.dm=onValue(ref(db,'directMessages/'+uid+'/'+activeDm),snap=>{box.replaceChildren();snap.forEach(child=>appendDm(child.val()))});
 }
 function appendDm(m){const p=document.createElement('p');p.className=m.fromUid===uid?'mine':'';p.textContent=(m.fromName||'Игрок')+': '+m.text+' · '+new Date(m.createdAt||Date.now()).toLocaleString('ru-RU');$('dmMessages')?.append(p)}
-async function sendDm(){const input=$('dmInput'),text=clean(input.value);if(!uid||!activeDm||!text)return;const key=[uid,activeDm].sort().join('_');try{await set(push(ref(db,'directMessages/'+key)),{fromUid:uid,fromName:profile?.nickname||'Игрок',text,createdAt:Date.now()});input.value=''}catch(error){alert('Не удалось отправить сообщение: '+(error.code||error.message))}}
+async function sendDm(){const input=$('dmInput'),text=clean(input.value);if(!uid||!activeDm||!text)return;try{const item={fromUid:uid,fromName:profile?.nickname||'Игрок',text,createdAt:Date.now()};await Promise.all([set(push(ref(db,'directMessages/'+uid+'/'+activeDm)),item),set(push(ref(db,'directMessages/'+activeDm+'/'+uid)),item)]);input.value=''}catch(error){alert('Не удалось отправить сообщение: '+(error.code||error.message))}}
 function watchSocial(){for(const stop of unsubscribers)if(typeof stop==='function')stop();unsubscribers=[];unsubscribers.push(onValue(ref(db,'friends/'+uid),s=>{friends=s.val()||{};renderFriends()}));unsubscribers.push(onValue(ref(db,'mail/'+uid),()=>renderMail()));unsubscribers.push(onValue(ref(db,'groupMembers/'+uid),()=>renderGroup()))}
 onAuthStateChanged(auth,async user=>{
   uid=user&&!user.isAnonymous?user.uid:'';
