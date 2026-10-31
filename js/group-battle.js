@@ -306,11 +306,14 @@ async function leaderTick(sessionRef, sessionId) {
       addEvent(current, 'Победа! Элитный противник повержен.', 'good');
       return current;
     }
-    if (current.turnIndex + 1 < current.turnOrder.length) {
-      current.turnIndex++;
-    } else {
-      applyEnemyTurn(current);
-      if (current.status === 'active') addEvent(current, 'Раунд ' + current.round + '. Ходы участников.', 'info');
+    const potionIsFreeAction = pending.type === 'potion' || pending.type === 'manaPotion';
+    if (!potionIsFreeAction) {
+      if (current.turnIndex + 1 < current.turnOrder.length) {
+        current.turnIndex++;
+      } else {
+        applyEnemyTurn(current);
+        if (current.status === 'active') addEvent(current, 'Раунд ' + current.round + '. Ходы участников.', 'info');
+      }
     }
     current.updatedAt = Date.now();
     return current;
