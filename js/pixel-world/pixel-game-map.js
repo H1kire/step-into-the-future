@@ -22,11 +22,11 @@ if (canvas) {
   const spriteCache = new Map();
 
   function spriteFor(entity) {
-    const key = entity.type === "monster" ? `monster:${entity.imageKey}` : `npc:${entity.type}`;
+    const key = entity.type === "monster" ? `monster:${entity.imageKey}` : entity.type === "player" ? `player:${entity.classId}` : `npc:${entity.type}`;
     if (!spriteCache.has(key)) {
       spriteCache.set(key, entity.type === "monster"
         ? createMonsterSprite(entity.imageKey)
-        : createNpcSprite(entity.type));
+        : entity.type === "player" ? createCharacterSprite(entity.classId || "adventurer") : createNpcSprite(entity.type));
     }
     return spriteCache.get(key);
   }
@@ -40,13 +40,13 @@ if (canvas) {
     if (classId !== activeCharacter) { activeCharacter = classId; world.setCharacter(classId); }
     const monsters = snapshot.monsters || [];
     const signature = [classId,
-      ...monsters.map(monster => `${monster.id}:${monster.x}:${monster.y}:${monster.imageKey}`),
+      ...monsters.map(monster => `${monster.id}:${monster.x}:${monster.y}:${monster.imageKey}`),\n      ...(snapshot.players||[]).map(player => `player:${player.id}:${player.x}:${player.y}:${player.classId}`),
       snapshot.merchant ? `merchant:${snapshot.merchant.x}:${snapshot.merchant.y}` : '',
       snapshot.priest ? `priest:${snapshot.priest.x}:${snapshot.priest.y}` : ''
     ].join('|');
     if (signature === lastEntitySignature) return;
     lastEntitySignature = signature;
-    const entities = monsters.map(monster => ({ ...monster, type: "monster", sprite: spriteFor({ imageKey: monster.imageKey, type: "monster" }), width: 16, height: 20 }));
+    const entities = monsters.map(monster => ({ ...monster, type: "monster", sprite: spriteFor({ imageKey: monster.imageKey, type: "monster" }), width: 16, height: 20 }));\n    for (const player of snapshot.players || []) entities.push({ ...player, type: "player", sprite: spriteFor({ type: "player", classId: player.classId }), width: 16, height: 20 });
     if (snapshot.merchant) entities.push({ ...snapshot.merchant, type: "merchant", sprite: spriteFor({ type: "merchant" }), width: 16, height: 20 });
     if (snapshot.priest) entities.push({ ...snapshot.priest, type: "priest", sprite: spriteFor({ type: "priest" }), width: 16, height: 20 });
     world.setEntities(entities, entity => {
