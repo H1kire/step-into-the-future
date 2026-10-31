@@ -64,7 +64,7 @@ async function addFriend(){
     $('friendNickname').value='';renderFriends();
   }catch(error){message('friendFeedback','Не удалось добавить: '+(error.code||error.message)+' · проверь Firebase Rules.')}
 }
-async function getProfile(id){const s=await get(ref(db,'profiles/'+id));return s.val()||{}}
+async function getProfile(id){const [s,p]=await Promise.all([get(ref(db,'profiles/'+id)),get(ref(db,'publicProfiles/'+id))]);return {...(s.val()||{}),...(p.val()||{})}}
 async function renderFriends(){
   const box=$('friendsList');if(!box||!uid)return;
   try{
@@ -157,6 +157,7 @@ function watchSocial(){for(const stop of unsubscribers)if(typeof stop==='functio
 onAuthStateChanged(auth,async user=>{
   uid=user&&!user.isAnonymous?user.uid:'';
   if(!uid){profile=null;return}
-  try{const p=await get(ref(db,'profiles/'+uid));profile=p.val()||{};watchSocial()}catch(error){console.error('Social profile error',error)}
+  try{const p=await get(ref(db,'profiles/'+uid));profile=p.val()||{};watchSocial();publishPublicProfile();setInterval(publishPublicProfile,30000)}catch(error){console.error('Social profile error',error)}
 });
+function publishPublicProfile(){if(!uid)return;try{const save=JSON.parse(localStorage.getItem('gorodskie-stranniki-save-v1')||'null'),state=save?.state||{};set(ref(db,'publicProfiles/'+uid),{nickname:profile?.nickname||'Игрок',classId:state.ascensionClass||'adventurer',level:Math.max(1,Number(state.level)||1),updatedAt:Date.now()}).catch(error=>console.warn('Public profile update failed',error))}catch{}}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(createUI,0));else setTimeout(createUI,0);
