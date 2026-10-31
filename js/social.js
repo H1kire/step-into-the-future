@@ -108,11 +108,10 @@ async function renderGroup(){
   const codeRow=document.createElement('div');codeRow.className='group-code';const codeText=document.createElement('code');codeText.textContent=code;const copy=document.createElement('button');copy.className='secondary tiny-copy';copy.textContent='⧉';copy.title='Копировать код';copy.onclick=()=>navigator.clipboard?.writeText(code);codeRow.append('Код группы: ',codeText,copy);
   const list=document.createElement('div');list.className='group-slots';
   for(let i=0;i<5;i++){const m=members[i],slot=document.createElement('div');slot.className='group-slot';slot.textContent=m?(i+1+'. '+m.nickname+' · '+classLabel(m.classId)+' · ур. '+m.level):(i+1+'. Свободное место');list.append(slot)}
-  const settings=document.createElement('div');settings.className='group-settings';settings.innerHTML='<label><input type="checkbox" id="groupBattleToggle" checked> Групповое сражение</label><label><input type="checkbox" id="groupLootToggle" checked> Общая группа</label>';
+  const settings=document.createElement('div');settings.className='group-settings';settings.innerHTML='<label><input type="checkbox" id="groupBattleToggle" checked> Групповое сражение</label>';
   const leave=document.createElement('button');leave.className='danger full';leave.textContent='Покинуть группу';leave.onclick=leaveGroup;
   $('groupDetails').replaceChildren(head,codeRow,list,settings,leave);
   const battleToggle=$('groupBattleToggle');battleToggle.checked=group.groupBattleEnabled!==false;battleToggle.onchange=()=>{if(group.leaderUid===uid)update(ref(db,'groups/'+code),{groupBattleEnabled:battleToggle.checked});else battleToggle.checked=group.groupBattleEnabled!==false};
-  const lootToggle=$('groupLootToggle');lootToggle.checked=group.sharedCombatEnabled!==false;lootToggle.onchange=()=>{if(group.leaderUid===uid)update(ref(db,'groups/'+code),{sharedCombatEnabled:lootToggle.checked});else lootToggle.checked=group.sharedCombatEnabled!==false};
 }
 function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 async function joinGroup(){
