@@ -149,3 +149,5 @@ header{position:fixed;inset:0 0 auto;height:calc(58px + env(safe-area-inset-top,
 .dm-messages p{font-size:12px;padding:7px;background:var(--panel2);border-radius:8px;margin:5px 0;overflow-wrap:anywhere}
 .dm-messages p.mine{border:1px solid #47776d}
 @media(max-width:780px){.social-panel{max-height:58dvh;width:min(430px,calc(100vw - 16px))}.social-menu-buttons{gap:4px}.social-menu-buttons button{font-size:10px;padding:8px 2px}.friend-actions button{font-size:10px}.mail-actions button{font-size:9px}}
+
+.group-settings{display:grid;gap:7px;padding:9px;background:var(--panel2);border-radius:9px}.group-settings label{display:flex;align-items:center;gap:8px;font-size:12px}.group-settings input{accent-color:var(--green)}
