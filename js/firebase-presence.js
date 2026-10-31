@@ -199,7 +199,8 @@ onAuthStateChanged(auth, async user => {
       const profile = await ensureAccountProfile(user);
       chatName = profile.nickname || `user${profile.accountNumber}`;
       if (lastPosition) lastPosition.name = chatName;
-      cloudUid = user.uid; cloudReady = false;
+      cloudUid = user.uid; cloudReady = true;
+      window.dispatchEvent(new CustomEvent('game:cloud-ready', { detail: { uid: user.uid } }));
       dispatchAccount(user, profile);
       watchProfile(user);
       try {
@@ -213,14 +214,12 @@ onAuthStateChanged(auth, async user => {
           if (localSave) pendingCloudSave = localSave;
         }
         cloudReady = true;
-        window.dispatchEvent(new CustomEvent('game:cloud-ready', { detail: { uid: user.uid } }));
         if (cloudSaveTimer) clearTimeout(cloudSaveTimer);
         if (cloudSaveInterval) clearInterval(cloudSaveInterval);
         if (pendingCloudSave && cloudAutoSaveEnabled) queueCloudSave(pendingCloudSave);
         cloudSaveInterval = setInterval(() => flushCloudSave(), 60000);
       } catch (error) {
-        cloudReady = false;
-        window.dispatchEvent(new CustomEvent('game:cloud-ready', { detail: { uid: user.uid, error: String(error?.code || error?.message || 'Firebase') } }));
+        cloudReady = true;
         if (onlineStatus) onlineStatus.textContent = 'Облако: ошибка загрузки';
         console.error('Firebase cloud save load failed', error);
       }
