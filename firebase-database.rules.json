@@ -8,8 +8,8 @@
     "profiles": {
       "$uid": {
         ".read": "auth != null && auth.uid === $uid",
-        ".write": "auth != null && auth.uid === $uid && (!data.exists() || newData.child('nickname').val() === data.child('nickname').val() || newData.child('nickname').val().matches(/^User[0-9]+$/) || now - data.child('nicknameChangedAt').val() >= 86400000)",
-        ".validate": "newData.hasChildren(['accountNumber', 'nickname', 'createdAt', 'nicknameChangedAt'])",
+        ".write": "auth != null && auth.uid === $uid && (!data.exists() || newData.child('nickname').val() === data.child('nickname').val() || (data.child('nicknameStandardized').val() !== true && newData.child('nicknameStandardized').val() === true && newData.child('nickname').val().matches(/^User[0-9]+$/)) || now - data.child('nicknameChangedAt').val() >= 86400000)",
+        ".validate": "newData.hasChildren(['accountNumber', 'nickname', 'createdAt', 'nicknameChangedAt', 'nicknameStandardized'])",
         "accountNumber": {
           ".validate": "newData.isNumber() && newData.val() > 0 && (!data.exists() || newData.val() === data.val())"
         },
@@ -21,6 +21,9 @@
         },
         "nicknameChangedAt": {
           ".validate": "newData.isNumber() && (newData.val() === data.val() || (newData.parent().child('nickname').val() !== data.parent().child('nickname').val() && newData.val() <= now && (!data.exists() || now - data.val() >= 86400000)))"
+        },
+        "nicknameStandardized": {
+          ".validate": "newData.isBoolean() && (!data.exists() || newData.val() === data.val())"
         },
         "$other": {
           ".validate": false
