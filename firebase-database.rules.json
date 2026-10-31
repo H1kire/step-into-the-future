@@ -25,7 +25,8 @@
         "$other": {
           ".validate": false
         }
-      }
+      },
+      ".read": "auth != null"
     },
     "chatMessages": {
       ".read": "auth != null",
@@ -117,6 +118,51 @@
         },
         "$other": {
           ".validate": false
+        }
+      }
+    },
+    "nicknameIndex": {
+      ".read": "auth != null",
+      "$nickname": {
+        ".write": "auth != null && ((!data.exists() && newData.val() === auth.uid) || (data.val() === auth.uid && !newData.exists()))",
+        ".validate": "newData.isString() && newData.val() === auth.uid"
+      }
+    },
+    "friends": {
+      ".read": "auth != null",
+      "$uid": {
+        ".write": "auth != null && auth.uid === $uid"
+      }
+    },
+    "groups": {
+      ".read": "auth != null",
+      "$groupId": {
+        ".write": "auth != null",
+        "members": {
+          ".validate": "newData.numChildren() <= 5"
+        }
+      }
+    },
+    "groupMembers": {
+      ".read": "auth != null",
+      "$uid": {
+        ".write": "auth != null && auth.uid === $uid"
+      }
+    },
+    "mail": {
+      ".read": "auth != null",
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        ".write": "auth != null"
+      }
+    },
+    "directMessages": {
+      ".read": false,
+      "$owner": {
+        ".read": "auth != null && auth.uid === $owner",
+        "$peer": {
+          ".read": "auth != null && (auth.uid === $owner || auth.uid === $peer)",
+          ".write": "auth != null && (auth.uid === $owner || auth.uid === $peer)"
         }
       }
     }
