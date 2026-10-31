@@ -103,7 +103,7 @@ function publishPosition() {
 setInterval(() => { if (!document.hidden) publishPosition(); }, 10000);
 document.addEventListener('visibilitychange', () => { if (!document.hidden) publishPosition(); });
 
-function dispatchAccount(user, profile) {
+function dispatchAccount(user, profile, profileError = null) {
   if (!user || user.isAnonymous) {
     cloudUid = null; cloudReady = false; pendingCloudSave = null; if (cloudSaveTimer) clearTimeout(cloudSaveTimer); if (cloudSaveInterval) clearInterval(cloudSaveInterval); cloudSaveTimer = null; cloudSaveInterval = null;
     window.dispatchEvent(new CustomEvent('firebase:auth', { detail: { uid: '', profile: null } }));
@@ -116,6 +116,7 @@ function dispatchAccount(user, profile) {
     uid: user.uid,
     isDeveloper: !!developerUid && user.uid === developerUid,
     profile,
+    profileError: profileError ? String(profileError?.code || profileError?.message || profileError) : '',
     email: maskedEmail,
     createdAt: profile?.createdAt || Date.parse(user.metadata.creationTime || '') || Date.now()
   }}));
@@ -311,8 +312,8 @@ onAuthStateChanged(auth, async user => {
     } catch (error) {
       cloudUid = user.uid; cloudReady = true;
       window.dispatchEvent(new CustomEvent('game:cloud-ready', { detail: { uid: user.uid } }));
-      dispatchAccount(user, null);
-      if (onlineStatus) onlineStatus.textContent = 'Аккаунт: обнови Rules базы Firebase';
+      dispatchAccount(user, null, error);
+      if (onlineStatus) onlineStatus.textContent = 'Аккаунт: ошибка загрузки профиля — ' + String(error?.code || error?.message || 'Firebase');
       console.error('Firebase profile setup failed', error);
     }
   }
