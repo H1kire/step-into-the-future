@@ -165,6 +165,25 @@
           ".write": "auth != null && (auth.uid === $owner || auth.uid === $peer)"
         }
       }
+    },
+    "publicProfiles": {
+      ".read": "auth != null",
+      "$uid": {
+        ".write": "auth != null && auth.uid === $uid",
+        ".validate": "newData.hasChildren(['nickname','classId','level','updatedAt'])",
+        "nickname": {
+          ".validate": "newData.isString() && newData.val().length <= 20"
+        },
+        "classId": {
+          ".validate": "newData.isString() && newData.val().length <= 20"
+        },
+        "level": {
+          ".validate": "newData.isNumber() && newData.val() >= 1 && newData.val() <= 100000"
+        },
+        "updatedAt": {
+          ".validate": "newData.isNumber()"
+        }
+      }
     }
   }
 }
