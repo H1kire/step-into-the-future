@@ -353,6 +353,10 @@ async function saveNickname() {
     const remaining = 86400000 - (serverNow - (profile.nicknameChangedAt || 0));
     if (remaining > 0) { feedback.textContent = `Ник можно менять через ${Math.ceil(remaining / 3600000)} ч.`; return; }
     step = 'проверка уникальности ника';
+    const allProfiles = await get(ref(database, 'profiles'));
+    let nicknameTaken = false;
+    allProfiles.forEach(child => { if (child.key !== user.uid && String(child.val()?.nickname || '').toLocaleLowerCase() === nickname.toLocaleLowerCase()) nicknameTaken = true; });
+    if (nicknameTaken) { feedback.textContent = 'Этот никнейм уже занят.'; return; }
     const nicknameKey = nickname.toLocaleLowerCase();
     const indexRef = ref(database, 'nicknameIndex/' + nicknameKey);
     const indexResult = await runTransaction(indexRef, current => current === null || current === user.uid ? user.uid : undefined);
