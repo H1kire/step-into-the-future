@@ -1,6 +1,6 @@
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js';
 import { initializeAppCheck, ReCaptchaV3Provider } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-app-check.js';
-import { getAuth, signInAnonymously, GoogleAuthProvider, linkWithPopup, signInWithPopup, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js';
+import { getAuth, signInAnonymously, GoogleAuthProvider, linkWithPopup, signInWithPopup, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js';
 import { getDatabase, ref, onValue, onChildAdded, set, onDisconnect, get, runTransaction, update, serverTimestamp, push, query, orderByChild, limitToLast, endAt, remove } from 'https://www.gstatic.com/firebasejs/10.12.5/firebase-database.js';
 
 import { firebaseConfig, appCheckSiteKey, developerUid } from './firebase-config.js';
@@ -290,6 +290,16 @@ function showAuthError(error) {
 }
 
 document.getElementById('googleSignInBtn')?.addEventListener('click', connectGoogleAccount);
+
+window.addEventListener('game:account-sign-out-request', async () => {
+  try {
+    await signOut(auth);
+    window.dispatchEvent(new CustomEvent('firebase:account-sign-out-status', { detail: { ok: true } }));
+  } catch (error) {
+    console.error('Firebase sign out failed', error);
+    window.dispatchEvent(new CustomEvent('firebase:account-sign-out-status', { detail: { ok: false, message: String(error?.message || error?.code || 'Не удалось выйти') } }));
+  }
+});
 
 window.addEventListener('game:chat-send', async event => {
   const { text: rawText, lat, lng } = event.detail || {};
