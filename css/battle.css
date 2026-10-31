@@ -20,3 +20,20 @@
 
 /* Elite enemy keeps a static, rarity-colored neon aura (no animation). */
 #enemySprite.elite-enemy-sprite{filter:drop-shadow(0 0 5px var(--elite-color)) drop-shadow(0 0 13px var(--elite-color))}
+
+/* Shared group battle layout */
+.group-arena{grid-template-columns:minmax(0,1.35fr) 42px minmax(240px,.85fr);align-items:stretch;min-height:unset}
+.group-party{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;align-content:start}
+.group-player-fighter{padding:12px;text-align:center;border-color:#38556b}
+.group-player-fighter .sprite-stage{height:110px;margin:2px 0 5px}
+.group-player-fighter .sprite canvas{width:100px;height:100px}
+.group-player-fighter h2{font-size:16px}
+.group-player-fighter .level-label{margin-bottom:8px}
+.group-player-fighter .bar{height:9px}
+.group-player-fighter .bar-label{font-size:11px}
+.group-player-fighter .bar.energy i{background:linear-gradient(90deg,#2386d8,#6bd7ff)}
+.group-player-fighter .battle-stats{font-size:11px}
+.group-player-fighter.own-fighter{border-color:#73e0a0;box-shadow:0 0 0 1px #73e0a055,0 12px 28px #0005}
+.group-player-fighter.current-turn{border-color:#ffd166;box-shadow:0 0 0 2px #ffd16666,0 0 22px #ffd16622}
+.group-arena .enemy-fighter{height:fit-content;position:sticky;top:12px}
+@media(max-width:760px){.group-arena{grid-template-columns:1fr;gap:12px;padding:12px}.group-arena>.versus{font-size:14px}.group-party{grid-template-columns:repeat(auto-fit,minmax(145px,1fr))}.group-arena .enemy-fighter{position:static}.group-player-fighter .sprite-stage{height:85px}}
