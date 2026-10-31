@@ -48,10 +48,17 @@ window.addEventListener('game:cloud-autosave-setting', event => {
     try { const local = JSON.parse(localStorage.getItem(GAME_SAVE_KEY) || 'null'); if (local) queueCloudSave(local); } catch {}
   }
 });
-window.addEventListener('game:manual-cloud-save-request', () => {
-  try { pendingCloudSave = JSON.parse(localStorage.getItem(GAME_SAVE_KEY) || 'null'); } catch { pendingCloudSave = null; }
-  if (pendingCloudSave) queueCloudSave(pendingCloudSave, true);
-  else window.dispatchEvent(new CustomEvent('game:cloud-save-status', { detail: { ok: false, message: 'local-save-not-found' } }));
+window.addEventListener('game:manual-cloud-save-request', async () => {
+  const user = auth.currentUser;
+  if (!user || user.isAnonymous) { window.dispatchEvent(new CustomEvent('game:cloud-save-status', { detail: { ok: false, message: 'Сначала войди через Google.' } })); return; }
+  if (!cloudReady || cloudUid !== user.uid) { window.dispatchEvent(new CustomEvent('game:cloud-save-status', { detail: { ok: false, message: 'Облачное хранилище ещё подключается. Подожди несколько секунд и повтори.' } })); return; }
+  let snapshot = null;
+  try { snapshot = JSON.parse(localStorage.getItem(GAME_SAVE_KEY) || 'null'); } catch {}
+  if (!snapshot || typeof snapshot !== 'object') { window.dispatchEvent(new CustomEvent('game:cloud-save-status', { detail: { ok: false, message: 'Локальное сохранение не найдено.' } })); return; }
+  pendingCloudSave = snapshot;
+  if (cloudSaveTimer) clearTimeout(cloudSaveTimer);
+  cloudSaveTimer = null;
+  await flushCloudSave(true);
 });
 window.addEventListener('game:cloud-restore-request', async () => {
   const user = auth.currentUser;
@@ -192,9 +199,9 @@ onAuthStateChanged(auth, async user => {
       const profile = await ensureAccountProfile(user);
       chatName = profile.nickname || `user${profile.accountNumber}`;
       if (lastPosition) lastPosition.name = chatName;
+      cloudUid = user.uid; cloudReady = false;
       dispatchAccount(user, profile);
       watchProfile(user);
-      cloudUid = user.uid; cloudReady = false;
       try {
         const cloudSnapshot = await get(ref(database, 'gameSaves/' + user.uid));
         if (cloudSnapshot.exists() && cloudSnapshot.val()?.data && typeof cloudSnapshot.val().data === 'object') {
@@ -206,12 +213,14 @@ onAuthStateChanged(auth, async user => {
           if (localSave) pendingCloudSave = localSave;
         }
         cloudReady = true;
+        window.dispatchEvent(new CustomEvent('game:cloud-ready', { detail: { uid: user.uid } }));
         if (cloudSaveTimer) clearTimeout(cloudSaveTimer);
         if (cloudSaveInterval) clearInterval(cloudSaveInterval);
         if (pendingCloudSave && cloudAutoSaveEnabled) queueCloudSave(pendingCloudSave);
         cloudSaveInterval = setInterval(() => flushCloudSave(), 60000);
       } catch (error) {
         cloudReady = false;
+        window.dispatchEvent(new CustomEvent('game:cloud-ready', { detail: { uid: user.uid, error: String(error?.code || error?.message || 'Firebase') } }));
         if (onlineStatus) onlineStatus.textContent = 'Облако: ошибка загрузки';
         console.error('Firebase cloud save load failed', error);
       }
