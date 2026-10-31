@@ -112,7 +112,7 @@ function dispatchAccount(user, profile) {
 async function ensureAccountProfile(user) {
   const userProfileRef = ref(database, `profiles/${user.uid}`);
   const existing = await get(userProfileRef);
-  if (existing.exists()) return existing.val();
+  if (existing.exists()) { const profile = existing.val(); const key = String(profile.nickname || '').toLocaleLowerCase(); if (key) await runTransaction(ref(database, 'nicknameIndex/' + key), current => current || user.uid); return profile; }
 
   // This client-side counter assigns a display number when someone first enters the game.
   const counterResult = await runTransaction(ref(database, 'accountCounter'), value => (Number.isSafeInteger(value) && value >= 0 ? value : 0) + 1);
@@ -125,6 +125,7 @@ async function ensureAccountProfile(user) {
     nicknameChangedAt: 0
   };
   const profileResult = await runTransaction(userProfileRef, current => current || initialProfile);
+  await runTransaction(ref(database, 'nicknameIndex/' + initialProfile.nickname.toLocaleLowerCase()), current => current || user.uid);
   if (!profileResult.committed) throw new Error('Не удалось создать профиль аккаунта');
   return profileResult.snapshot.val();
 }
@@ -351,8 +352,15 @@ async function saveNickname() {
     const serverNow = Date.now();
     const remaining = 86400000 - (serverNow - (profile.nicknameChangedAt || 0));
     if (remaining > 0) { feedback.textContent = `Ник можно менять через ${Math.ceil(remaining / 3600000)} ч.`; return; }
+    step = 'проверка уникальности ника';
+    const nicknameKey = nickname.toLocaleLowerCase();
+    const indexRef = ref(database, 'nicknameIndex/' + nicknameKey);
+    const indexResult = await runTransaction(indexRef, current => current === null || current === user.uid ? user.uid : undefined);
+    if (!indexResult.committed) { feedback.textContent = 'Этот никнейм уже занят.'; return; }
     step = 'запись ника в Firebase';
     await update(profileRef, { nickname, nicknameChangedAt: serverTimestamp() });
+    const oldKey = String(profile.nickname || '').toLocaleLowerCase();
+    if (oldKey && oldKey !== nicknameKey) { const oldIndex = ref(database, 'nicknameIndex/' + oldKey); await runTransaction(oldIndex, current => current === user.uid ? null : current); }
     setNicknameEditor(false);
     feedback.textContent = 'Ник успешно сохранён.';
   } catch (error) {
