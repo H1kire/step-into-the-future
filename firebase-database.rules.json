@@ -93,6 +93,9 @@
           ".validate": "newData.hasChildren(['state', 'monsters'])",
           "state": {
             ".validate": "newData.hasChildren(['level', 'hp', 'maxHp', 'energy', 'maxEnergy'])",
+            "$other": {
+              ".validate": true
+            },
             "level": {
               ".validate": "newData.isNumber() && newData.val() >= 1 && newData.val() <= 100000"
             },
@@ -156,7 +159,11 @@
       ".read": "auth != null",
       "$uid": {
         ".read": "auth != null && auth.uid === $uid",
-        ".write": "auth != null && (auth.uid === $uid || (!data.exists() && newData.child('fromUid').val() === auth.uid))"
+        ".write": "auth != null && auth.uid === $uid",
+        "$messageId": {
+          ".write": "auth != null && (auth.uid === $uid || (!data.exists() && newData.child('fromUid').val() === auth.uid))",
+          ".validate": "!newData.exists() || newData.hasChildren(['fromUid', 'fromName', 'type', 'text', 'createdAt'])"
+        }
       }
     },
     "directMessages": {
