@@ -1,4 +1,6 @@
-const VERSION = "sprite-sheet-2";
+const VERSION = "sprite-sheet-3";
+const wolfSprite = new Image();
+wolfSprite.src = new URL("../../assets/pixel-world/wolf-generated.png?v=1", import.meta.url).href;
 const monsterAtlas = new Image();
 monsterAtlas.src = new URL("../../assets/pixel-world/monsters.svg?v=" + VERSION, import.meta.url).href;
 const npcAtlas = new Image();
@@ -11,6 +13,13 @@ function paint(canvas, kind, npc = false) {
   const index = (npc ? NPCS : MONSTERS).indexOf(kind);
   const ctx = canvas.getContext("2d");
   ctx.clearRect(0, 0, canvas.width, canvas.height);
+  if (!npc && kind === "wolf") {
+    if (wolfSprite.complete && wolfSprite.naturalWidth) {
+      ctx.imageSmoothingEnabled = false;
+      ctx.drawImage(wolfSprite, 0, 0, canvas.width, canvas.height);
+    }
+    return;
+  }
   if (index >= 0 && atlas.complete && atlas.naturalWidth) {
     ctx.imageSmoothingEnabled = false;
     ctx.drawImage(atlas, index * 32, 0, 32, 32, 0, 0, canvas.width, canvas.height);
@@ -28,6 +37,9 @@ function create(kind, scale, npc = false) {
   paint(canvas, safeKind, npc);
   return canvas;
 }
+wolfSprite.addEventListener("load", () => {
+  for (const canvas of caches.get("monster:wolf") || []) paint(canvas, "wolf");
+});
 monsterAtlas.addEventListener("load", () => {
   for (const kind of MONSTERS) for (const canvas of caches.get("monster:" + kind) || []) paint(canvas, kind);
 });
