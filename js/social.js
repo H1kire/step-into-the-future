@@ -30,7 +30,7 @@ function createUI(){
   dmContent.innerHTML='<div id="dmMessages" class="dm-messages"></div><div class="chatrow"><input id="dmInput" maxlength="500" placeholder="Сообщение…"><button class="primary" id="dmSend">➤</button></div>';
   document.addEventListener('click',e=>{
     const b=e.target.closest('[data-social-open]');if(!b)return;
-    document.querySelectorAll('.social-panel').forEach(p=>p.classList.add('hidden'));
+    if(innerWidth<=780)document.querySelectorAll('.social-panel').forEach(p=>p.classList.add('hidden'));
     $('actionMenu')?.classList.add('hidden');$('menuToggle')?.setAttribute('aria-expanded','false');
     const p=$(b.dataset.socialOpen);p?.classList.remove('hidden');p.style.zIndex='4800';
     if(b.dataset.socialOpen==='friendsPanel')renderFriends();
@@ -169,23 +169,34 @@ async function leaveGroup(){
     renderGroup();
   }catch(error){message('groupFeedback','Ошибка выхода или роспуска: '+(error.code||error.message))}
 }
-async function acceptGroupInvitation(id,code){
+async function acceptGroupInvitation(id,code,actionButton,row){
+  const status=row?.querySelector('.mail-action-status');
+  const report=text=>{if(status)status.textContent=text;else alert(text)};
+  if(actionButton){actionButton.disabled=true;actionButton.textContent='Вступаем…'}
   try{
+    if(!code){report('В приглашении отсутствует код группы.');return}
     const [current,groupSnapshot]=await Promise.all([get(ref(db,'groupMembers/'+uid)),get(ref(db,'groups/'+code))]);
-    if(current.exists()){message('groupFeedback','Ты уже состоишь в группе. Сначала покинь текущую группу.');return}
+    if(current.exists()){report('Ты уже состоишь в другой группе. Сначала покинь её.');return}
     const target=groupSnapshot.val();
-    if(!target||!target.members||Object.keys(target.members).length>=5){message('groupFeedback','Группа больше не существует или уже заполнена.');return}
+    if(!target||!target.members||Object.keys(target.members).length>=5){report('Группа больше не существует или уже заполнена.');return}
+    const member={uid,nickname:profile?.nickname||'Игрок',classId:profile?.classId||'',level:profile?.level||1,joinedAt:Date.now()};
     const result=await runTransaction(ref(db,'groups/'+code),data=>{
       if(!data||!data.members||Object.keys(data.members).length>=5||data.members[uid])return;
-      data.members[uid]={uid,nickname:profile?.nickname||'Игрок',classId:profile?.classId||'',level:profile?.level||1,joinedAt:Date.now()};
+      data.members[uid]=member;
       return data;
     });
-    if(!result.committed){message('groupFeedback','Не удалось вступить: группа заполнена или закрыта.');return}
-    await set(ref(db,'groupMembers/'+uid),code);
+    if(!result.committed){report('Не удалось вступить: группа заполнена или приглашение устарело.');return}
+    try{await set(ref(db,'groupMembers/'+uid),code)}
+    catch(error){await set(ref(db,'groups/'+code+'/members/'+uid),null).catch(()=>{});throw error}
     await set(ref(db,'mail/'+uid+'/'+id),null);
     window.dispatchEvent(new Event('game:group-changed'));
-    group=result.snapshot.val();renderGroup();renderMail();
-  }catch(error){alert('Не удалось принять приглашение: '+(error.code||error.message))}
+    group=result.snapshot.val();
+    await renderGroup();await renderMail();
+  }catch(error){
+    const reason=String(error?.code||error?.message||error);
+    report('Не удалось принять приглашение: '+reason);
+    console.error('Group invitation acceptance failed',error);
+  }finally{if(actionButton){actionButton.disabled=false;actionButton.textContent='Принять'}}
 }
 async function acceptFriendRequest(id,fromUid,fromName){
   try{
@@ -213,9 +224,10 @@ async function renderMail(){
         actions.append(accept,decline);row.append(actions);
       }else if(m.type==='group-invite'){
         const actions=document.createElement('div');actions.className='mail-request-actions';
-        const accept=document.createElement('button');accept.className='primary';accept.textContent='Принять';accept.onclick=()=>acceptGroupInvitation(id,m.groupCode);
+        const accept=document.createElement('button');accept.className='primary';accept.textContent='Принять';accept.onclick=()=>acceptGroupInvitation(id,m.groupCode,accept,row);
         const decline=document.createElement('button');decline.className='danger';decline.textContent='Отказать';decline.onclick=()=>declineMail(id);
-        actions.append(accept,decline);row.append(actions);
+        const status=document.createElement('small');status.className='mail-action-status';status.setAttribute('aria-live','polite');
+        actions.append(accept,decline);row.append(actions,status);
       }
       const date=document.createElement('small');date.textContent=new Date(m.createdAt||Date.now()).toLocaleString('ru-RU');row.append(date);box.append(row);
     }
