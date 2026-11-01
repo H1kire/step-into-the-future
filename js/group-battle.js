@@ -409,8 +409,11 @@ export async function startGroupBattlePage() {
     const eliteColors = { common:'#d8e0e8', uncommon:'#57e68a', rare:'#55a9ff', epic:'#c16aff', legendary:'#ffb84d' };
     const enemySprite = $('groupEnemySprite');
     enemySprite.classList.add('elite-enemy-sprite');
-    enemySprite.style.setProperty('--elite-color', eliteColors[initial.enemy.eliteKey] || '#d8e0e8');
-    enemySprite.closest('.enemy-fighter')?.classList.add('elite-boss');
+    const eliteColor = eliteColors[initial.enemy.eliteKey] || '#d8e0e8';
+    enemySprite.style.setProperty('--elite-color', eliteColor);
+    const enemyCard = enemySprite.closest('.enemy-fighter');
+    enemyCard?.classList.add('elite-boss');
+    enemyCard?.style.setProperty('--elite-color', eliteColor);
     enemySprite.append(createMonsterSprite(initial.enemy.imageKey || 'slime', 3));
   } catch {}
   $('playerLevelTop').textContent = 'Групповой бой';
