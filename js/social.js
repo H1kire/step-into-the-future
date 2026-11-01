@@ -180,17 +180,20 @@ async function acceptGroupInvitation(id,code,actionButton,row){
     const target=groupSnapshot.val();
     if(!target||!target.members||Object.keys(target.members).length>=5){report('Группа больше не существует или уже заполнена.');return}
     const member={uid,nickname:profile?.nickname||'Игрок',classId:profile?.classId||'',level:profile?.level||1,joinedAt:Date.now()};
-    const result=await runTransaction(ref(db,'groups/'+code),data=>{
-      if(!data||!data.members||Object.keys(data.members).length>=5||data.members[uid])return;
-      data.members[uid]=member;
-      return data;
+    // Run the transaction only on the roster, not the entire group record.
+    // This keeps the leader/group metadata untouched and serializes capacity checks.
+    const membersRef=ref(db,'groups/'+code+'/members');
+    const result=await runTransaction(membersRef,currentMembers=>{
+      const roster=currentMembers&&typeof currentMembers==='object'?currentMembers:{};
+      const activeMembers=Object.values(roster).filter(Boolean).length;
+      if(roster[uid]||activeMembers>=5)return;
+      return {...roster,[uid]:member};
     });
     if(!result.committed){report('Не удалось вступить: группа заполнена или приглашение устарело.');return}
     try{await set(ref(db,'groupMembers/'+uid),code)}
     catch(error){await set(ref(db,'groups/'+code+'/members/'+uid),null).catch(()=>{});throw error}
     await set(ref(db,'mail/'+uid+'/'+id),null);
     window.dispatchEvent(new Event('game:group-changed'));
-    group=result.snapshot.val();
     await renderGroup();await renderMail();
   }catch(error){
     const reason=String(error?.code||error?.message||error);
