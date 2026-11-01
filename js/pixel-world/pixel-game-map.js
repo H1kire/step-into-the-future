@@ -1,6 +1,6 @@
-import { PixelWorldRenderer } from "./world-renderer.js?v=pixel-atlas-8";
-import { createCharacterSprite } from "./character-sprites.js?v=pixel-atlas-8";
-import { createMonsterSprite, createNpcSprite } from "./monster-sprites.js?v=pixel-atlas-8";
+import { PixelWorldRenderer } from "./world-renderer.js?v=pixel-atlas-9";
+import { createCharacterSprite } from "./character-sprites.js?v=pixel-atlas-9";
+import { createMonsterSprite, createNpcSprite } from "./monster-sprites.js?v=pixel-atlas-9";
 
 window.PixelSprites = { createCharacterSprite, createMonsterSprite, createNpcSprite };
 
@@ -47,7 +47,7 @@ if (canvas) {
     ].join('|');
     if (signature === lastEntitySignature) return;
     lastEntitySignature = signature;
-    const entities = monsters.map(monster => ({ ...monster, type: "monster", sprite: spriteFor({ imageKey: monster.imageKey, type: "monster" }), width: 16, height: 20 }));
+    const entities = monsters.map(monster => ({ ...monster, type: "monster", elite: !!monster.elite, eliteKey: monster.eliteKey || "common", sprite: spriteFor({ imageKey: monster.imageKey, type: "monster" }), width: 16, height: 20 }));
     for (const player of snapshot.players || []) entities.push({ ...player, type: "player", sprite: spriteFor({ type: "player", classId: player.classId }), width: 16, height: 20 });
     if (snapshot.merchant) entities.push({ ...snapshot.merchant, type: "merchant", sprite: spriteFor({ type: "merchant" }), width: 16, height: 20 });
     if (snapshot.priest) entities.push({ ...snapshot.priest, type: "priest", sprite: spriteFor({ type: "priest" }), width: 16, height: 20 });

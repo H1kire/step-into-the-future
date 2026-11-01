@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Бой · Городские странники</title>
-<link rel="stylesheet" href="./css/battle.css?v=group-battle-visuals-1">
+<link rel="stylesheet" href="./css/battle.css?v=group-battle-elite-pulse-2">
 </head>
 <body>
 <header class="battle-top"><a class="exit" id="exitBattle" href="./index.html">← Выйти из боя</a><div class="battle-title">⚔️ СРАЖЕНИЕ</div><div class="top-level" id="playerLevelTop">Уровень 1</div></header>
@@ -38,7 +38,7 @@
   <button id="returnAfterFight" class="action-button return" hidden>Вернуться на карту</button>
 </section>
 <script type="module">
-import { getStoredGroupBattle, startGroupBattlePage } from "./js/group-battle.js?v=group-battle-visuals-1";
+import { getStoredGroupBattle, startGroupBattlePage } from "./js/group-battle.js?v=group-battle-elite-pulse-2";
 if (getStoredGroupBattle()?.sessionId) await startGroupBattlePage();
 else await import("./js/battle.js?v=cloud-save-1");
 </script>

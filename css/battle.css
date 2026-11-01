@@ -18,9 +18,6 @@
 .turn-arrow{color:#62758a;font-size:20px;font-weight:900}
 @media(max-width:520px){.turn-track-wrap{padding:9px 6px}.turn-track{gap:4px}.turn-step{gap:4px;padding:6px 5px;font-size:10px}.turn-step>span{width:18px;height:18px;font-size:10px}.turn-arrow{font-size:13px}.turn-track-title{font-size:9px}}
 
-/* Elite enemy keeps a static, rarity-colored neon aura (no animation). */
-#enemySprite.elite-enemy-sprite{filter:drop-shadow(0 0 5px var(--elite-color)) drop-shadow(0 0 13px var(--elite-color))}
-
 /* Shared group battle layout */
 .group-arena{grid-template-columns:minmax(0,1.35fr) 42px minmax(240px,.85fr);align-items:stretch;min-height:unset}
 .group-party{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;align-content:start}
@@ -53,11 +50,14 @@
 }
 
 
-/* Elite enemies are visually distinct in both solo and group combat. */
+/* Elite enemies: deliberately strong, animated aura around the actual sprite. */
+@keyframes eliteAuraPulse{0%{opacity:.62;transform:translate(-50%,-50%) scale(.88);filter:blur(5px)}100%{opacity:1;transform:translate(-50%,-50%) scale(1.18);filter:blur(1px)}}
 @keyframes eliteSpritePulse{
-  from{filter:drop-shadow(0 0 4px var(--elite-color)) drop-shadow(0 0 10px var(--elite-color));transform:translateY(0) scale(1)}
-  to{filter:drop-shadow(0 0 9px var(--elite-color)) drop-shadow(0 0 21px var(--elite-color));transform:translateY(-2px) scale(1.035)}
+  0%{filter:drop-shadow(0 0 7px var(--elite-color)) drop-shadow(0 0 16px var(--elite-color)) drop-shadow(0 0 28px var(--elite-color)) saturate(1.5) brightness(1.08);transform:translateY(1px) scale(1)}
+  100%{filter:drop-shadow(0 0 13px var(--elite-color)) drop-shadow(0 0 30px var(--elite-color)) drop-shadow(0 0 52px var(--elite-color)) saturate(2.2) brightness(1.35);transform:translateY(-4px) scale(1.10)}
 }
-.elite-enemy-sprite canvas{animation:eliteSpritePulse 1.8s ease-in-out infinite alternate;transform-origin:50% 75%}
-.enemy-fighter.elite-boss{border-color:var(--elite-color,#d8e0e8);box-shadow:0 0 0 1px color-mix(in srgb,var(--elite-color,#d8e0e8) 42%,transparent),0 0 24px color-mix(in srgb,var(--elite-color,#d8e0e8) 24%,transparent),0 16px 45px #0005}
-@media(prefers-reduced-motion:reduce){.elite-enemy-sprite canvas{animation:none}}
+.elite-enemy-sprite{position:relative;isolation:isolate}
+.elite-enemy-sprite::before{content:"";position:absolute;z-index:0;left:50%;top:50%;width:76%;height:76%;border-radius:50%;background:radial-gradient(ellipse,color-mix(in srgb,var(--elite-color) 58%,transparent) 0%,color-mix(in srgb,var(--elite-color) 28%,transparent) 42%,transparent 73%);box-shadow:0 0 24px 8px color-mix(in srgb,var(--elite-color) 48%,transparent),0 0 48px 15px color-mix(in srgb,var(--elite-color) 26%,transparent);animation:eliteAuraPulse 1.05s ease-in-out infinite alternate;pointer-events:none}
+.elite-enemy-sprite canvas{position:relative;z-index:1;transform-origin:50% 75%;animation:eliteSpritePulse 1.05s ease-in-out infinite alternate}
+.enemy-fighter.elite-boss{border:2px solid var(--elite-color,#d8e0e8);box-shadow:0 0 0 2px color-mix(in srgb,var(--elite-color,#d8e0e8) 55%,transparent),0 0 30px color-mix(in srgb,var(--elite-color,#d8e0e8) 42%,transparent),0 0 65px color-mix(in srgb,var(--elite-color,#d8e0e8) 22%,transparent),0 16px 45px #0008}
+@media(prefers-reduced-motion:reduce){.elite-enemy-sprite::before,.elite-enemy-sprite canvas{animation:none}.elite-enemy-sprite::before{opacity:.95;transform:translate(-50%,-50%)}.elite-enemy-sprite canvas{filter:drop-shadow(0 0 12px var(--elite-color)) drop-shadow(0 0 28px var(--elite-color)) saturate(1.8)}}

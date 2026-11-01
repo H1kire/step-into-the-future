@@ -331,6 +331,16 @@ export class PixelWorldRenderer {
       const ex = (entity.x - left) * zoom, ey = (entity.y - top) * zoom;
       if (ex < -40 * zoom || ey < -40 * zoom || ex > width + 40 * zoom || ey > height + 40 * zoom) continue;
       const ew = (entity.sprite.width || entity.width || 16) * zoom, eh = (entity.sprite.height || entity.height || 20) * zoom;
+      if (entity.type === "monster" && entity.elite) {
+        const eliteColors = { common: "#d8e0e8", uncommon: "#57e68a", rare: "#55a9ff", epic: "#c16aff", legendary: "#ffb84d" };
+        const color = eliteColors[entity.eliteKey] || eliteColors.common;
+        const pulse = (Math.sin(Date.now() / 230) + 1) / 2;
+        ctx.save(); ctx.globalAlpha = .72 + pulse * .28; ctx.shadowColor = color; ctx.shadowBlur = (12 + pulse * 20) * zoom;
+        ctx.strokeStyle = color; ctx.lineWidth = Math.max(1.5, 2.5 * zoom); ctx.beginPath();
+        ctx.ellipse(Math.round(ex), Math.round(ey + 1 * zoom), (13 + pulse * 3) * zoom, (10 + pulse * 2) * zoom, 0, 0, Math.PI * 2); ctx.stroke();
+        ctx.fillStyle = color; ctx.globalAlpha = .12 + pulse * .12; ctx.beginPath();
+        ctx.ellipse(Math.round(ex), Math.round(ey), (13 + pulse * 3) * zoom, (10 + pulse * 2) * zoom, 0, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+      }
       ctx.fillStyle = "#17211c"; ctx.fillRect(Math.round(ex - 6 * zoom), Math.round(ey + 6 * zoom), Math.ceil(12 * zoom), Math.ceil(3 * zoom));
       ctx.drawImage(entity.sprite, Math.round(ex - ew / 2), Math.round(ey - eh * 0.72), Math.round(ew), Math.round(eh));
       if (entity.type === "player" && entity.name) {
