@@ -58,8 +58,10 @@ window.addEventListener('game:manual-cloud-save-request', async () => {
   const user = auth.currentUser;
   if (!user || user.isAnonymous) { window.dispatchEvent(new CustomEvent('game:cloud-save-status', { detail: { ok: false, message: 'Сначала войди через Google.' } })); return; }
   if (!cloudReady || cloudUid !== user.uid) { cloudUid = user.uid; cloudReady = true; }
-  let snapshot = null;
-  try { snapshot = JSON.parse(localStorage.getItem(GAME_SAVE_KEY) || 'null'); } catch {}
+  let snapshot = pendingCloudSave;
+  if (!snapshot || typeof snapshot !== 'object') {
+    try { snapshot = JSON.parse(localStorage.getItem(GAME_SAVE_KEY) || 'null'); } catch {}
+  }
   if (!snapshot || typeof snapshot !== 'object') { window.dispatchEvent(new CustomEvent('game:cloud-save-status', { detail: { ok: false, message: 'Локальное сохранение не найдено.' } })); return; }
   try {
     await set(ref(database, 'gameSaves/' + user.uid), { data: { ...snapshot, lastSimulationAt: Date.now() }, updatedAt: serverTimestamp() });
@@ -293,7 +295,7 @@ onAuthStateChanged(auth, async user => {
     return;
   }
   window.firebasePlayerUid = user.uid;
-  if (!user.isAnonymous) { cloudUid = user.uid; cloudReady = true; window.dispatchEvent(new CustomEvent('game:cloud-ready', { detail: { uid: user.uid } })); }
+  if (!user.isAnonymous) { cloudUid = user.uid; cloudReady = false; window.dispatchEvent(new CustomEvent('game:cloud-ready', { detail: { uid: user.uid } })); }
   if (user.isAnonymous) { chatName = 'Странник'; dispatchAccount(user, null); }
   else {
     try {
@@ -310,22 +312,15 @@ onAuthStateChanged(auth, async user => {
           ? cloudSnapshot.val().data
           : null;
         if (cloudSave) {
-          const cloudSavedAt = Number(cloudSave.lastSimulationAt) || 0;
-          const localSavedAt = Number(localSave?.lastSimulationAt) || 0;
+          // Cloud progress is the shared source of truth across browsers/devices.
+          // A local browser save may belong to a guest session or older character.
           window.dispatchEvent(new CustomEvent('game:cloud-load', { detail: { save: cloudSave, updatedAt: cloudSnapshot.val()?.updatedAt || 0 } }));
           lastCloudWriteAt = Date.now();
-          if (!localSave || cloudSavedAt > localSavedAt) {
-            // Restore the newest cloud snapshot automatically on this device.
-            window.dispatchEvent(new CustomEvent('game:cloud-restore', { detail: { save: cloudSave, updatedAt: cloudSnapshot.val()?.updatedAt || 0 } }));
-            pendingCloudSave = null;
-          } else if (localSavedAt > cloudSavedAt) {
-            // This device has newer progress; queue it for upload instead of
-            // silently replacing it with an older cloud snapshot.
-            pendingCloudSave = localSave;
-          } else {
-            pendingCloudSave = null;
-          }
+          pendingCloudSave = null;
+          window.dispatchEvent(new CustomEvent('game:cloud-restore', { detail: { save: cloudSave, updatedAt: cloudSnapshot.val()?.updatedAt || 0 } }));
         } else if (localSave) {
+          // First cloud login on this account: upload local progress only if no
+          // cloud snapshot exists yet for this Google account.
           pendingCloudSave = localSave;
         }
         cloudReady = true;
@@ -336,11 +331,15 @@ onAuthStateChanged(auth, async user => {
       } catch (error) {
         cloudReady = true;
         if (onlineStatus) onlineStatus.textContent = 'Облако: ошибка загрузки';
+        const reason = String(error?.code || error?.message || 'Firebase');
+        window.dispatchEvent(new CustomEvent('game:cloud-save-status', { detail: { ok: false, message: 'Не удалось прочитать облачное сохранение: ' + reason } }));
+        window.dispatchEvent(new CustomEvent('game:cloud-restore-status-result', { detail: { message: 'Не удалось прочитать облачное сохранение: ' + reason } }));
         console.error('Firebase cloud save load failed', error);
       }
     } catch (error) {
       cloudUid = user.uid; cloudReady = true;
       window.dispatchEvent(new CustomEvent('game:cloud-ready', { detail: { uid: user.uid } }));
+      window.dispatchEvent(new CustomEvent('game:cloud-save-status', { detail: { ok: false, message: 'Ошибка подготовки аккаунта/облака: ' + String(error?.code || error?.message || 'Firebase') } }));
       dispatchAccount(user, null, error);
       if (onlineStatus) onlineStatus.textContent = 'Аккаунт: ошибка загрузки профиля — ' + String(error?.code || error?.message || 'Firebase');
       console.error('Firebase profile setup failed', error);
