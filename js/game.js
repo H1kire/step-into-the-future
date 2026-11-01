@@ -74,38 +74,70 @@ function setupPanels(){
  const panels=[['logPanel','log','📜 Журнал'],['bagPanel','equip','🎒 Снаряжение'],['chatPanel','chat','💬 Чат поблизости']];
  for(const [id,selector,title] of panels){const query=selector==='log'?'.log':selector==='equip'?'#bagCount':'#chatlog';const card=aside.querySelector(query).closest('.card');card.id=id;card.classList.add('floating-panel','hidden');card.style.left=`${startLeft}px`;card.style.top='74px';const bar=document.createElement('div');bar.className='panel-title';bar.innerHTML=`<h2>${title}</h2><button type="button" class="secondary panel-close">✕</button>`;card.querySelector('h2').replaceWith(bar);document.body.append(card)}
  $('devToolsCard')?.remove();const combat=aside.querySelector('#enemyCard');combat.classList.add('floating-panel');combat.style.left=`${startLeft}px`;combat.style.top='74px';const combatTitle=document.createElement('div');combatTitle.className='panel-title';combatTitle.innerHTML='<h2>Обнаружен противник!</h2><button type="button" class="secondary combat-close" aria-label="Прекратить бой и закрыть окно" title="Прекратить бой">✕</button>';combat.querySelector('h2').replaceWith(combatTitle);combatTitle.querySelector('.combat-close').addEventListener('click',closeCombat);
- menu.querySelectorAll('[data-open]').forEach(button=>button.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();if(button.dataset.open==='devPanel'&&!isDeveloper)return;const panel=$(button.dataset.open);if(!panel)return;menu.classList.add('hidden');menuButton.setAttribute('aria-expanded','false');if(window.isMobileGameDevice?.())document.querySelectorAll('#logPanel,#bagPanel,#chatPanel,#statsPanel,#abilityTreePanel,#accountPanel,#devPanel,#ascensionPanel,#friendsPanel,#groupPanel,#mailPanel').forEach(p=>p.classList.add('hidden'));panel.classList.remove('hidden');panel.style.zIndex='4500';if(button.dataset.open==='statsPanel')renderStats()}));
+ menu.querySelectorAll('[data-open]').forEach(button=>button.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();if(button.dataset.open==='devPanel'&&!isDeveloper)return;const panel=$(button.dataset.open);if(!panel)return;if(window.isMobileGameDevice?.()){menu.classList.add('hidden');menuButton.setAttribute('aria-expanded','false');document.querySelectorAll('#logPanel,#bagPanel,#chatPanel,#statsPanel,#abilityTreePanel,#accountPanel,#devPanel,#ascensionPanel,#friendsPanel,#groupPanel,#mailPanel,#merchantPanel,#priestPanel,#enemyCard').forEach(p=>p.classList.add('hidden'))}panel.classList.remove('hidden');panel.style.zIndex='4500';if(button.dataset.open==='statsPanel')renderStats()}));
  document.querySelectorAll('.panel-close').forEach(button=>button.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();button.closest('.floating-panel').classList.add('hidden');if(button.closest('#actionMenu'))menuButton.setAttribute('aria-expanded','false')}));
  const fitPanelToViewport=(panel,top=panel.getBoundingClientRect().top)=>{
   if(panel.id==='playerHud')return;
   const rect=panel.getBoundingClientRect();
   const headerBottom=document.querySelector('header')?.getBoundingClientRect().bottom||0;
-  const safeTop=Math.max(headerBottom,Math.min(innerHeight-40,top)),left=Math.max(0,Math.min(innerWidth-panel.offsetWidth,rect.left));
-  panel.style.transform='none';
-  panel.style.left=`${left}px`;panel.style.top=`${safeTop}px`;panel.style.bottom='auto';
-  panel.style.maxHeight=`${Math.max(40,innerHeight-safeTop-8)}px`;
+  const bottomSafe=8+(parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--safe-area-inset-bottom'))||0);
+  const safeTop=Math.max(headerBottom,Math.min(innerHeight-bottomSafe-40,top)),left=Math.max(0,Math.min(innerWidth-panel.offsetWidth,rect.left));
+  panel.style.transform='none';panel.style.left=`${left}px`;panel.style.top=`${safeTop}px`;panel.style.right='auto';panel.style.bottom='auto';
+  panel.style.maxHeight=`${Math.max(40,innerHeight-bottomSafe-safeTop)}px`;
  };
  let lastPanelTap=null,touchPanelDrag=null,suppressPanelClick=false,suppressPanelClickUntil=0,panelTapTimer=null;
+ const beginMobilePanelDrag=(panel,e)=>{
+  const rect=panel.getBoundingClientRect();
+  if(panel.parentElement?.id==='mobileMainPanelLayer')document.body.append(panel);
+  panel.classList.add('mobile-panel-dragged','touch-drag-armed');
+  panel.style.position='fixed';panel.style.transform='none';
+  panel.style.width=`${rect.width}px`;panel.style.maxWidth='calc(100vw - 16px)';
+  panel.style.setProperty('--panel-width',`${rect.width}px`);
+  const left=Math.max(8,Math.min(innerWidth-rect.width-8,rect.left));
+  const top=Math.max(document.querySelector('header')?.getBoundingClientRect().bottom||0,rect.top);
+  panel.style.left=`${left}px`;panel.style.top=`${top}px`;panel.style.right='auto';panel.style.bottom='auto';
+  touchPanelDrag={panel,pointerId:e.pointerId,offsetX:e.clientX-left,offsetY:e.clientY-top};
+  suppressPanelClick=true;e.preventDefault();e.stopPropagation();
+  try{panel.setPointerCapture(e.pointerId)}catch{}
+ };
  document.addEventListener('pointerdown',e=>{
   if(e.pointerType!=='touch')return;
   if(e.target.closest('.ability-graph-scroll,#treeZoomToolbar')){lastPanelTap=null;clearTimeout(panelTapTimer);return}
-  const panel=e.target.closest('.floating-panel:not(#playerHud)');if(!panel)return;
-  const now=Date.now(),isSecondTap=lastPanelTap&&lastPanelTap.panel===panel&&now-lastPanelTap.at<450&&Math.hypot(e.clientX-lastPanelTap.x,e.clientY-lastPanelTap.y)<32;
-  if(!isSecondTap){lastPanelTap={panel,at:now,x:e.clientX,y:e.clientY};return}
-  clearTimeout(panelTapTimer);lastPanelTap=null;const rect=panel.getBoundingClientRect();panel.style.transform='none';panel.style.left=`${rect.left}px`;panel.style.top=`${rect.top}px`;touchPanelDrag={panel,pointerId:e.pointerId,offsetX:e.clientX-rect.left,offsetY:e.clientY-rect.top,moved:false};panel.classList.add('touch-drag-armed');
-  suppressPanelClick=true;e.preventDefault();e.stopPropagation();
-  try{panel.setPointerCapture(e.pointerId)}catch{}
+  const panel=e.target.closest('.floating-panel:not(#playerHud):not(.hidden)');if(!panel)return;
+  if(e.target.closest('button,input,textarea,select,a,[contenteditable="true"]'))return;
+  const onHeader=!!e.target.closest('.panel-title');
+  const now=Date.now();
+  const isSecondTap=lastPanelTap&&lastPanelTap.panel===panel&&now-lastPanelTap.at<450&&Math.hypot(e.clientX-lastPanelTap.x,e.clientY-lastPanelTap.y)<32;
+  if(onHeader||panel.dataset.freeDrag==='true'||isSecondTap){
+   if(isSecondTap)panel.dataset.freeDrag='true';
+   clearTimeout(panelTapTimer);lastPanelTap=null;beginMobilePanelDrag(panel,e);return;
+  }
+  lastPanelTap={panel,at:now,x:e.clientX,y:e.clientY};
+  clearTimeout(panelTapTimer);
+  panelTapTimer=setTimeout(()=>{if(lastPanelTap?.panel===panel)lastPanelTap=null},460);
  },true);
  document.addEventListener('pointermove',e=>{
   const drag=touchPanelDrag;if(!drag||e.pointerId!==drag.pointerId)return;
-  if(Math.hypot(e.movementX||0,e.movementY||0)>1)drag.moved=true;
+  const panel=drag.panel,rect=panel.getBoundingClientRect();
   const headerBottom=document.querySelector('header')?.getBoundingClientRect().bottom||0;
-  const left=Math.max(0,Math.min(innerWidth-drag.panel.offsetWidth,e.clientX-drag.offsetX));
-  const top=Math.max(headerBottom,Math.min(innerHeight-40,e.clientY-drag.offsetY));
-  drag.panel.style.left=`${left}px`;drag.panel.style.top=`${top}px`;drag.panel.style.bottom='auto';drag.panel.style.maxHeight=`${Math.max(40,innerHeight-top-8)}px`;
+  const bottomSafe=8;
+  const maxLeft=Math.max(8,innerWidth-rect.width-8);
+  const left=Math.max(8,Math.min(maxLeft,e.clientX-drag.offsetX));
+  const maxTop=Math.max(headerBottom,innerHeight-bottomSafe-40);
+  const top=Math.max(headerBottom,Math.min(maxTop,e.clientY-drag.offsetY));
+  const availableHeight=Math.max(40,innerHeight-bottomSafe-top);
+  panel.style.left=`${left}px`;panel.style.top=`${top}px`;
+  panel.style.setProperty('--panel-left',`${left}px`);panel.style.setProperty('--panel-top',`${top}px`);
+  panel.style.setProperty('--panel-max-height',`${availableHeight}px`);
+  panel.style.maxHeight=`${availableHeight}px`;
   e.preventDefault();
  },{capture:true,passive:false});
- const finishTouchPanelDrag=e=>{if(touchPanelDrag?.pointerId===e.pointerId){touchPanelDrag.panel.classList.remove('touch-drag-armed');touchPanelDrag=null;lastPanelTap=null;suppressPanelClickUntil=Date.now()+700;setTimeout(()=>{suppressPanelClick=false},700)}else if(lastPanelTap){const tappedPanel=lastPanelTap.panel;tappedPanel.classList.add('touch-drag-armed');clearTimeout(panelTapTimer);panelTapTimer=setTimeout(()=>tappedPanel.classList.remove('touch-drag-armed'),450)}};
+ const finishTouchPanelDrag=e=>{
+  if(touchPanelDrag?.pointerId===e.pointerId){
+   touchPanelDrag.panel.classList.remove('touch-drag-armed');touchPanelDrag=null;lastPanelTap=null;
+   suppressPanelClickUntil=Date.now()+700;setTimeout(()=>{suppressPanelClick=false},700);
+  }
+ };
  document.addEventListener('pointerup',finishTouchPanelDrag,true);document.addEventListener('pointercancel',finishTouchPanelDrag,true);
  document.addEventListener('click',e=>{if(!suppressPanelClick||Date.now()>suppressPanelClickUntil)return;suppressPanelClick=false;suppressPanelClickUntil=0;e.preventDefault();e.stopPropagation()},true);
  let desktopPanelDrag=null;
@@ -150,7 +182,7 @@ function setupPanels(){
   }
  });
  floatingPanelObserver.observe(document.body,{childList:true,subtree:true});
- const mobileMainPanelIds=new Set(['logPanel','bagPanel','chatPanel','statsPanel','abilityTreePanel','accountPanel','devPanel','ascensionPanel','friendsPanel','groupPanel','mailPanel','merchantPanel','priestPanel','enemyCard']);
+ const mobileMainPanelIds=new Set(['actionMenu','logPanel','bagPanel','chatPanel','statsPanel','abilityTreePanel','accountPanel','devPanel','ascensionPanel','friendsPanel','groupPanel','mailPanel','merchantPanel','priestPanel','enemyCard']);
  let mobileMainPanelLayer=null;
  const getMobileMainPanelLayer=()=>{
   if(mobileMainPanelLayer?.isConnected)return mobileMainPanelLayer;

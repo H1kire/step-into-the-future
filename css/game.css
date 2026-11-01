@@ -168,3 +168,22 @@ header{position:fixed;inset:0 0 auto;height:calc(58px + env(safe-area-inset-top,
  #mobileMainPanelLayer>#bagPanel{width:min(495px,calc(100% - 16px))!important}
  #mobileMainPanelLayer>.enemy.floating-panel{width:min(360px,calc(100% - 16px))!important}
 }
+
+
+/* Mobile panels can be detached from the centered layer and freely dragged.
+   Their width stays fixed; only available vertical height is reduced at screen edges. */
+@media(max-width:780px){
+ .floating-panel.mobile-panel-dragged{
+  position:fixed!important;
+  left:var(--panel-left,8px)!important;
+  top:var(--panel-top,calc(54px + env(safe-area-inset-top,0px)))!important;
+  right:auto!important;bottom:auto!important;
+  width:var(--panel-width, min(420px,calc(100vw - 16px)))!important;
+  max-width:calc(100vw - 16px)!important;
+  max-height:var(--panel-max-height,calc(100dvh - 70px))!important;
+  transform:none!important;margin:0!important;
+  overflow:auto;overscroll-behavior:contain;
+ }
+ .floating-panel.mobile-panel-dragged .panel-title{cursor:grabbing}
+ .floating-panel.touch-drag-armed{touch-action:none!important;user-select:none}
+}
