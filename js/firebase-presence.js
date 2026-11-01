@@ -317,7 +317,14 @@ onAuthStateChanged(auth, async user => {
           window.dispatchEvent(new CustomEvent('game:cloud-load', { detail: { save: cloudSave, updatedAt: cloudSnapshot.val()?.updatedAt || 0 } }));
           lastCloudWriteAt = Date.now();
           pendingCloudSave = null;
-          window.dispatchEvent(new CustomEvent('game:cloud-restore', { detail: { save: cloudSave, updatedAt: cloudSnapshot.val()?.updatedAt || 0 } }));
+          const alreadyRestored = !!localSave
+            && Number(localSave.lastSimulationAt || 0) === Number(cloudSave.lastSimulationAt || 0)
+            && Number(localSave.savedAt || 0) === Number(cloudSave.savedAt || 0);
+          // Avoid reloading forever after the cloud snapshot has been copied
+          // into localStorage on the previous login.
+          if (!alreadyRestored) {
+            window.dispatchEvent(new CustomEvent('game:cloud-restore', { detail: { save: cloudSave, updatedAt: cloudSnapshot.val()?.updatedAt || 0 } }));
+          }
         } else if (localSave) {
           // First cloud login on this account: upload local progress only if no
           // cloud snapshot exists yet for this Google account.
