@@ -64,7 +64,7 @@ async function addFriend(){
     const inbox=await get(ref(db,'mail/'+targetUid));let alreadyPending=false;
     inbox.forEach(child=>{const item=child.val();if(item?.type==='friend-request'&&item.fromUid===uid)alreadyPending=true});
     if(alreadyPending){message('friendFeedback','Заявка этому игроку уже отправлена.');return}
-    await set(push(ref(db,'mail/'+targetUid)),{type:'friend-request',fromUid:uid,fromName:profile?.nickname||'Игрок',text:'Игрок '+(profile?.nickname||'Игрок')+' хочет добавить вас в друзья.',createdAt:Date.now(),read:false});
+    await set(push(ref(db,'mail/'+targetUid)),{type:'friend-request',fromUid:uid,fromName:profile?.nickname||'Игрок',text:'Игрок '+(profile?.nickname||'Игрок')+' хочет стать с вами друзьями.',createdAt:Date.now(),read:false});
     message('friendFeedback','Заявка отправлена игроку '+(target.nickname||nickname)+'. Он должен принять её в Почте.');
     $('friendNickname').value='';
   }catch(error){message('friendFeedback','Не удалось отправить заявку: '+(error.code||error.message)+' · проверь Firebase Rules.')}
