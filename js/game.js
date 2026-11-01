@@ -73,7 +73,7 @@ function setupPanels(){
  const panels=[['logPanel','log','📜 Журнал'],['bagPanel','equip','🎒 Снаряжение'],['chatPanel','chat','💬 Чат поблизости']];
  for(const [id,selector,title] of panels){const query=selector==='log'?'.log':selector==='equip'?'#bagCount':'#chatlog';const card=aside.querySelector(query).closest('.card');card.id=id;card.classList.add('floating-panel','hidden');card.style.left=`${startLeft}px`;card.style.top='74px';const bar=document.createElement('div');bar.className='panel-title';bar.innerHTML=`<h2>${title}</h2><button type="button" class="secondary panel-close">✕</button>`;card.querySelector('h2').replaceWith(bar);document.body.append(card)}
  $('devToolsCard')?.remove();const combat=aside.querySelector('#enemyCard');combat.classList.add('floating-panel');combat.style.left=`${startLeft}px`;combat.style.top='74px';const combatTitle=document.createElement('div');combatTitle.className='panel-title';combatTitle.innerHTML='<h2>Обнаружен противник!</h2><button type="button" class="secondary combat-close" aria-label="Прекратить бой и закрыть окно" title="Прекратить бой">✕</button>';combat.querySelector('h2').replaceWith(combatTitle);combatTitle.querySelector('.combat-close').addEventListener('click',closeCombat);
- menu.querySelectorAll('[data-open]').forEach(button=>button.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();if(button.dataset.open==='devPanel'&&!isDeveloper)return;const panel=$(button.dataset.open);if(!panel)return;menu.classList.add('hidden');menuButton.setAttribute('aria-expanded','false');document.querySelectorAll('#logPanel,#bagPanel,#chatPanel,#statsPanel,#abilityTreePanel,#accountPanel,#devPanel').forEach(p=>p.classList.add('hidden'));panel.classList.remove('hidden');panel.style.zIndex='4500';if(button.dataset.open==='statsPanel')renderStats()}));
+ menu.querySelectorAll('[data-open]').forEach(button=>button.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();if(button.dataset.open==='devPanel'&&!isDeveloper)return;const panel=$(button.dataset.open);if(!panel)return;menu.classList.add('hidden');menuButton.setAttribute('aria-expanded','false');if(innerWidth<=780)document.querySelectorAll('#logPanel,#bagPanel,#chatPanel,#statsPanel,#abilityTreePanel,#accountPanel,#devPanel').forEach(p=>p.classList.add('hidden'));panel.classList.remove('hidden');panel.style.zIndex='4500';if(button.dataset.open==='statsPanel')renderStats()}));
  document.querySelectorAll('.panel-close').forEach(button=>button.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();button.closest('.floating-panel').classList.add('hidden');if(button.closest('#actionMenu'))menuButton.setAttribute('aria-expanded','false')}));
  const fitPanelToViewport=(panel,top=panel.getBoundingClientRect().top)=>{
   if(panel.id==='playerHud')return;
@@ -162,8 +162,10 @@ function setupPanels(){
   for(const record of records){
    const panel=record.target;
    if(!(panel instanceof Element)||!panel.classList.contains('floating-panel')||panel.classList.contains('hidden'))continue;
-   const before=String(record.oldValue||'').split(/\\s+/);
-   const becameVisible=before.includes('hidden')||(!before.includes('show')&&panel.classList.contains('show'));
+   const oldClasses=String(record.oldValue||'');
+   const wasHidden=/(^|\s)hidden(\s|$)/.test(oldClasses);
+   const wasShown=/(^|\s)show(\s|$)/.test(oldClasses);
+   const becameVisible=wasHidden||(!wasShown&&panel.classList.contains('show'));
    if(becameVisible)requestAnimationFrame(()=>centerFloatingPanel(panel));
   }
  });
