@@ -34,19 +34,28 @@
 .group-player-fighter.current-turn{border-color:#ffd166;box-shadow:0 0 0 2px #ffd16666,0 0 22px #ffd16622}
 .group-arena .enemy-fighter{height:fit-content;position:sticky;top:12px}
 @media(max-width:760px){
- .group-arena{
-  display:grid;grid-template-columns:max-content 22px max-content;align-items:stretch;
-  justify-content:start;gap:8px;padding:12px;min-height:unset;
-  overflow-x:auto;overflow-y:hidden;overscroll-behavior-x:contain;
-  -webkit-overflow-scrolling:touch;scroll-snap-type:x proximity;
- }
- .group-arena>.versus{font-size:14px;align-self:center}
- .group-party{display:flex;flex-flow:row nowrap;gap:8px;align-items:stretch}
- .group-player-fighter{flex:0 0 150px;width:150px;padding:9px 7px;scroll-snap-align:start}
- .group-arena .enemy-fighter{position:static;flex:0 0 165px;width:165px;padding:9px 8px;scroll-snap-align:start}
- .group-player-fighter .sprite-stage{height:85px}
- .group-player-fighter .sprite canvas{width:76px;height:76px}
- .group-arena .enemy-fighter .sprite-stage{height:105px}
+ .group-arena{display:grid;grid-template-columns:minmax(0,1fr) 14px minmax(0,.72fr);align-items:stretch;justify-content:stretch;gap:3px;padding:8px 5px;min-height:unset;width:100%;overflow:hidden}
+ .group-arena>.versus{font-size:10px;align-self:center;min-width:0}
+ .group-party{display:flex;flex-flow:row nowrap;gap:2px;align-items:stretch;min-width:0;width:100%}
+ .group-player-fighter{flex:1 1 0;width:auto;min-width:0;padding:4px 2px;border-radius:7px}
+ .group-arena .enemy-fighter{position:static;flex:1 1 0;width:auto;min-width:0;padding:5px 3px;border-radius:7px}
+ .group-player-fighter .sprite-stage{height:48px;margin:1px 0 3px}
+ .group-player-fighter .sprite canvas{width:46px;height:46px}
+ .group-player-fighter h2{font-size:8px;line-height:1.1;overflow-wrap:anywhere;margin:2px 0}
+ .group-player-fighter .level-label{font-size:7px;line-height:1.1;margin-bottom:4px;overflow-wrap:anywhere}
+ .group-player-fighter .fighter-label{font-size:7px;letter-spacing:0}
+ .group-player-fighter .bar-label{font-size:7px;line-height:1.1;gap:1px;margin-top:4px;flex-wrap:wrap}
+ .group-player-fighter .bar-label b{font-size:7px;white-space:normal;overflow-wrap:anywhere}
+ .group-player-fighter .bar{height:5px;margin-top:2px}
+ .group-player-fighter .battle-stats{font-size:7px;gap:1px;margin-top:4px;flex-wrap:wrap}
+ .group-arena .enemy-fighter .fighter-label{font-size:7px;letter-spacing:0}
+ .group-arena .enemy-fighter .sprite-stage{height:58px;margin:2px 0 3px}
+ .group-arena .enemy-fighter .sprite canvas{width:54px;height:54px}
+ .group-arena .enemy-fighter h2{font-size:9px;line-height:1.1;overflow-wrap:anywhere}
+ .group-arena .enemy-fighter .level-label{font-size:7px;margin-bottom:4px}
+ .group-arena .enemy-fighter .bar-label{font-size:7px;gap:1px;flex-wrap:wrap;margin-top:4px}
+ .group-arena .enemy-fighter .bar-label b{font-size:7px;white-space:normal}
+ .group-arena .enemy-fighter .bar{height:5px;margin-top:2px}
 }
 
 
@@ -61,3 +70,12 @@
 .elite-enemy-sprite canvas{position:relative;z-index:1;transform-origin:50% 75%;animation:eliteSpritePulse 1.05s ease-in-out infinite alternate}
 .enemy-fighter.elite-boss{border:2px solid var(--elite-color,#d8e0e8);box-shadow:0 0 0 2px color-mix(in srgb,var(--elite-color,#d8e0e8) 55%,transparent),0 0 30px color-mix(in srgb,var(--elite-color,#d8e0e8) 42%,transparent),0 0 65px color-mix(in srgb,var(--elite-color,#d8e0e8) 22%,transparent),0 16px 45px #0008}
 @media(prefers-reduced-motion:reduce){.elite-enemy-sprite::before,.elite-enemy-sprite canvas{animation:none}.elite-enemy-sprite::before{opacity:.95;transform:translate(-50%,-50%)}.elite-enemy-sprite canvas{filter:drop-shadow(0 0 12px var(--elite-color)) drop-shadow(0 0 28px var(--elite-color)) saturate(1.8)}}
+
+@media(max-width:650px){
+ .turn-track-wrap{width:calc(100% - 12px);padding:8px 5px}
+ .turn-track{gap:3px;flex-wrap:nowrap;min-width:0}
+ .turn-step{min-width:0;gap:3px;padding:4px 5px;font-size:9px;flex:0 1 auto}
+ .turn-step>span{width:16px;height:16px;flex:0 0 16px;font-size:9px}
+ .turn-step>b{min-width:0;max-width:68px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+ .turn-arrow{font-size:11px;flex:0 0 auto}
+}

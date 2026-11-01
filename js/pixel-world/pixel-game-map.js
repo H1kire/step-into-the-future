@@ -40,7 +40,7 @@ if (canvas) {
     if (classId !== activeCharacter) { activeCharacter = classId; world.setCharacter(classId); }
     const monsters = snapshot.monsters || [];
     const signature = [classId,
-      ...monsters.map(monster => `${monster.id}:${monster.x}:${monster.y}:${monster.imageKey}`),
+      ...monsters.map(monster => `${monster.id}:${monster.x}:${monster.y}:${monster.imageKey}:${monster.elite ? 1 : 0}:${monster.eliteKey || 'common'}`),
       ...(snapshot.players||[]).map(player => `player:${player.id}:${player.x}:${player.y}:${player.classId}`),
       snapshot.merchant ? `merchant:${snapshot.merchant.x}:${snapshot.merchant.y}` : '',
       snapshot.priest ? `priest:${snapshot.priest.x}:${snapshot.priest.y}` : ''

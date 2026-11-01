@@ -1,4 +1,4 @@
-import { createCharacterSprite } from "./character-sprites.js?v=pixel-atlas-7";
+import { createCharacterSprite } from "./character-sprites.js?v=elite-map-10";
 
 export const WORLD_SIZE = 100_000;
 export const TILE_SIZE = 32;
@@ -104,10 +104,10 @@ export class PixelWorldRenderer {
     this.seed = options.seed ?? Math.floor(Math.random() * 0x7fffffff);
     this.terrainAtlas = new Image();
     this.terrainAtlas.addEventListener("load", () => this.chunkCache.clear());
-    this.terrainAtlas.src = new URL("../../assets/pixel-world/terrain.svg?v=pixel-atlas-7", import.meta.url).href;
+    this.terrainAtlas.src = new URL("../../assets/pixel-world/terrain.svg?v=elite-map-10", import.meta.url).href;
     this.propsAtlas = new Image();
     this.propsAtlas.addEventListener("load", () => this.chunkCache.clear());
-    this.propsAtlas.src = new URL("../../assets/pixel-world/props.svg?v=pixel-atlas-7", import.meta.url).href;
+    this.propsAtlas.src = new URL("../../assets/pixel-world/props.svg?v=elite-map-10", import.meta.url).href;
     this.worldSize = options.worldSize ?? WORLD_SIZE;
     this.speed = options.speed ?? 180;
     this.onMove = options.onMove ?? null;
@@ -331,18 +331,24 @@ export class PixelWorldRenderer {
       const ex = (entity.x - left) * zoom, ey = (entity.y - top) * zoom;
       if (ex < -40 * zoom || ey < -40 * zoom || ex > width + 40 * zoom || ey > height + 40 * zoom) continue;
       const ew = (entity.sprite.width || entity.width || 16) * zoom, eh = (entity.sprite.height || entity.height || 20) * zoom;
+      ctx.fillStyle = "#17211c"; ctx.fillRect(Math.round(ex - 6 * zoom), Math.round(ey + 6 * zoom), Math.ceil(12 * zoom), Math.ceil(3 * zoom));
       if (entity.type === "monster" && entity.elite) {
         const eliteColors = { common: "#d8e0e8", uncommon: "#57e68a", rare: "#55a9ff", epic: "#c16aff", legendary: "#ffb84d" };
         const color = eliteColors[entity.eliteKey] || eliteColors.common;
         const pulse = (Math.sin(Date.now() / 230) + 1) / 2;
-        ctx.save(); ctx.globalAlpha = .72 + pulse * .28; ctx.shadowColor = color; ctx.shadowBlur = (12 + pulse * 20) * zoom;
-        ctx.strokeStyle = color; ctx.lineWidth = Math.max(1.5, 2.5 * zoom); ctx.beginPath();
-        ctx.ellipse(Math.round(ex), Math.round(ey + 1 * zoom), (13 + pulse * 3) * zoom, (10 + pulse * 2) * zoom, 0, 0, Math.PI * 2); ctx.stroke();
-        ctx.fillStyle = color; ctx.globalAlpha = .12 + pulse * .12; ctx.beginPath();
-        ctx.ellipse(Math.round(ex), Math.round(ey), (13 + pulse * 3) * zoom, (10 + pulse * 2) * zoom, 0, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+        const radiusX = Math.max(12, ew * (.72 + pulse * .18));
+        const radiusY = Math.max(10, eh * (.42 + pulse * .12));
+        ctx.save(); ctx.globalAlpha = .58 + pulse * .38; ctx.shadowColor = color; ctx.shadowBlur = (18 + pulse * 30) * zoom;
+        ctx.fillStyle = color; ctx.beginPath(); ctx.ellipse(Math.round(ex), Math.round(ey), radiusX, radiusY, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.globalAlpha = .9; ctx.lineWidth = Math.max(2, 3.5 * zoom); ctx.strokeStyle = color;
+        ctx.beginPath(); ctx.ellipse(Math.round(ex), Math.round(ey), radiusX * 1.12, radiusY * 1.12, 0, 0, Math.PI * 2); ctx.stroke();
+        ctx.restore();
+        ctx.save(); ctx.shadowColor = color; ctx.shadowBlur = (16 + pulse * 32) * zoom;
+        ctx.filter = `saturate(${1.7 + pulse * .8}) brightness(${1.12 + pulse * .28})`;
+        ctx.drawImage(entity.sprite, Math.round(ex - ew / 2), Math.round(ey - eh * 0.72), Math.round(ew), Math.round(eh)); ctx.restore();
+      } else {
+        ctx.drawImage(entity.sprite, Math.round(ex - ew / 2), Math.round(ey - eh * 0.72), Math.round(ew), Math.round(eh));
       }
-      ctx.fillStyle = "#17211c"; ctx.fillRect(Math.round(ex - 6 * zoom), Math.round(ey + 6 * zoom), Math.ceil(12 * zoom), Math.ceil(3 * zoom));
-      ctx.drawImage(entity.sprite, Math.round(ex - ew / 2), Math.round(ey - eh * 0.72), Math.round(ew), Math.round(eh));
       if (entity.type === "player" && entity.name) {
         const label = String(entity.name).slice(0, 24);
         const fontSize = Math.max(9, Math.min(13, 11 * zoom));

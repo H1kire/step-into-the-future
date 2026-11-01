@@ -417,7 +417,30 @@ export async function startGroupBattlePage() {
     enemySprite.append(createMonsterSprite(initial.enemy.imageKey || 'slime', 3));
   } catch {}
   $('playerLevelTop').textContent = 'Групповой бой';
-  $('turnTrack').innerHTML = '<div class="turn-step active" id="groupRoundStep"><span>1</span><b>Подготовка</b></div><span class="turn-arrow">→</span><div class="turn-step" id="groupEnemyStep"><span>2</span><b>Атака монстра</b></div>';
+    const buildTurnTrack = session => {
+    const track = $('turnTrack');
+    track.replaceChildren();
+    const order = session.turnOrder || Object.keys(session.roster || {});
+    order.forEach((uid, index) => {
+      if (index) { const arrow = document.createElement('span'); arrow.className = 'turn-arrow'; arrow.textContent = '→'; track.append(arrow); }
+      const step = document.createElement('div'); step.className = 'turn-step'; step.dataset.groupTurnUid = uid;
+      const number = document.createElement('span'); number.textContent = String(index + 1);
+      const label = document.createElement('b'); label.textContent = session.roster?.[uid]?.nickname || 'Игрок ' + (index + 1);
+      step.append(number, label);
+      const currentIndex = Number(session.turnIndex) || 0;
+      step.classList.toggle('active', session.phase === 'joining' ? index === 0 : session.phase === 'players' && index === currentIndex);
+      step.classList.toggle('complete', session.phase === 'players' && index < currentIndex);
+      track.append(step);
+    });
+    const arrow = document.createElement('span'); arrow.className = 'turn-arrow'; arrow.textContent = '→'; track.append(arrow);
+    const enemyStep = document.createElement('div'); enemyStep.className = 'turn-step'; enemyStep.dataset.groupTurnEnemy = 'true';
+    const enemyNumber = document.createElement('span'); enemyNumber.textContent = String(order.length + 1);
+    const enemyLabel = document.createElement('b'); enemyLabel.textContent = 'Монстр';
+    enemyStep.append(enemyNumber, enemyLabel);
+    enemyStep.classList.toggle('active', session.phase === 'enemy');
+    enemyStep.classList.toggle('complete', Number(session.round) > 1);
+    track.append(enemyStep);
+  };
   const note = (message, kind) => {
     const p = document.createElement('p');
     p.textContent = message;
@@ -479,9 +502,7 @@ export async function startGroupBattlePage() {
     $('groupEnemyHpBar').style.width = Math.max(0, Math.min(100, session.enemy.hp / session.enemy.maxHp * 100)) + '%';
     $('groupEnemyAttack').textContent = session.enemy.atk;
     $('groupEnemyDefense').textContent = session.enemy.def;
-    $('groupRoundStep').querySelector('b').textContent = session.phase === 'joining' ? 'Подключение' : 'Раунд ' + session.round;
-    $('groupEnemyStep').classList.toggle('active', session.phase === 'enemy');
-    $('groupRoundStep').classList.toggle('active', session.phase !== 'enemy');
+    buildTurnTrack(session);
     const own = session.roster?.[user.uid];
     const isTurn = session.status === 'active' && session.phase === 'players' && session.turnOrder?.[session.turnIndex] === user.uid && own?.stats?.hp > 0;
     const waiting = session.status === 'active' && session.phase === 'joining';
