@@ -1,6 +1,6 @@
 import { createCharacterSprite, getCharacterDefinitions } from "./character-sprites.js?v=ambient-sheet-1";
-import { createMonsterSprite, createNpcSprite, getMonsterDefinitions } from "./monster-sprites.js?v=sprite-sheet-2";
-import { PixelWorldRenderer, WORLD_SIZE } from "./world-renderer.js?v=ambient-sheet-1";
+import { createMonsterSprite, createNpcSprite, getMonsterDefinitions } from "./monster-sprites.js?v=poster-monsters-1";
+import { PixelWorldRenderer, WORLD_SIZE } from "./world-renderer.js?v=poster-terrain-1";
 
 function addSpriteCard(container, name, description, sprite, kind = "character") {
   const card = document.createElement("article");

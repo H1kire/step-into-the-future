@@ -52,13 +52,13 @@ function drawTile(ctx, tx, ty, seed, atlas) {
       terrainAt(tx, ty + 1, seed) === "water" || terrainAt(tx, ty - 1, seed) === "water"
     );
     let index;
-    if (adjacentWater) index = r > 0.5 ? 10 : 11;
-    else if (terrain === "water") index = r > 0.5 ? 8 : 9;
-    else if (terrain === "sand") index = r > 0.5 ? 6 : 7;
-    else if (terrain === "stone") index = r > 0.65 ? 12 : (r > 0.3 ? 13 : 14);
-    else if (terrain === "forest") index = r > 0.72 ? 2 : (r > 0.35 ? 3 : 1);
-    else index = r > 0.8 ? 15 : 0;
-    ctx.drawImage(atlas, (index % 4) * 32, Math.floor(index / 4) * 32, 32, 32, x, y, TILE_SIZE, TILE_SIZE);
+    if (adjacentWater) index = r > 0.5 ? 5 : 11;
+    else if (terrain === "water") index = r > 0.75 ? 16 : (r > 0.45 ? 10 : (r > 0.2 ? 15 : 4));
+    else if (terrain === "sand") index = r > 0.5 ? 6 : (r > 0.25 ? 17 : 2);
+    else if (terrain === "stone") index = r > 0.65 ? 14 : (r > 0.3 ? 9 : 3);
+    else if (terrain === "forest") index = r > 0.72 ? 8 : (r > 0.35 ? 13 : 1);
+    else index = r > 0.8 ? 12 : (r > 0.4 ? 8 : 0);
+    ctx.drawImage(atlas, (index % 6) * 24, Math.floor(index / 6) * 24, 24, 24, x, y, TILE_SIZE, TILE_SIZE);
     return;
   }
   const colors = PALETTE[terrain];
@@ -105,7 +105,7 @@ export class PixelWorldRenderer {
     this.seed = options.seed ?? Math.floor(Math.random() * 0x7fffffff);
     this.terrainAtlas = new Image();
     this.terrainAtlas.addEventListener("load", () => this.chunkCache.clear());
-    this.terrainAtlas.src = new URL("../../assets/pixel-world/terrain.svg?v=elite-map-10", import.meta.url).href;
+    this.terrainAtlas.src = new URL("../../assets/pixel-world/terrain-poster.webp?v=poster-terrain-1", import.meta.url).href;
     this.propsAtlas = new Image();
     this.propsAtlas.addEventListener("load", () => this.chunkCache.clear());
     this.propsAtlas.src = new URL("../../assets/pixel-world/props.svg?v=elite-map-10", import.meta.url).href;
