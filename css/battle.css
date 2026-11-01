@@ -78,4 +78,6 @@
  .turn-step>span{width:16px;height:16px;flex:0 0 16px;font-size:9px}
  .turn-step>b{min-width:0;max-width:68px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
  .turn-arrow{font-size:11px;flex:0 0 auto}
+ .turn-track [data-group-turn-uid] b{max-width:34px}
+ .turn-track [data-group-turn-enemy] b{max-width:34px}
 }
