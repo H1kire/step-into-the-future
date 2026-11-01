@@ -59,10 +59,15 @@ async function addFriend(){
     snap.forEach(child=>{if(String(child.val()?.nickname||'').toLocaleLowerCase()===nickname.toLocaleLowerCase()){targetUid=child.key;target=child.val()}});
     if(!targetUid){message('friendFeedback','Игрок с таким никнеймом не найден.');return}
     if(targetUid===uid){message('friendFeedback','Нельзя добавить самого себя.');return}
-    await set(ref(db,'friends/'+uid+'/'+targetUid),{uid:targetUid,addedAt:Date.now()});
-    message('friendFeedback','Игрок '+target.nickname+' добавлен в друзья!');
-    $('friendNickname').value='';renderFriends();
-  }catch(error){message('friendFeedback','Не удалось добавить: '+(error.code||error.message)+' · проверь Firebase Rules.')}
+    const existing=await get(ref(db,'friends/'+uid+'/'+targetUid));
+    if(existing.exists()){message('friendFeedback','Этот игрок уже есть в твоих друзьях.');return}
+    const inbox=await get(ref(db,'mail/'+targetUid));let alreadyPending=false;
+    inbox.forEach(child=>{const item=child.val();if(item?.type==='friend-request'&&item.fromUid===uid)alreadyPending=true});
+    if(alreadyPending){message('friendFeedback','Заявка этому игроку уже отправлена.');return}
+    await set(push(ref(db,'mail/'+targetUid)),{type:'friend-request',fromUid:uid,fromName:profile?.nickname||'Игрок',text:'Игрок '+(profile?.nickname||'Игрок')+' хочет добавить вас в друзья.',createdAt:Date.now(),read:false});
+    message('friendFeedback','Заявка отправлена игроку '+(target.nickname||nickname)+'. Он должен принять её в Почте.');
+    $('friendNickname').value='';
+  }catch(error){message('friendFeedback','Не удалось отправить заявку: '+(error.code||error.message)+' · проверь Firebase Rules.')}
 }
 async function getProfile(id){const [s,p]=await Promise.all([get(ref(db,'profiles/'+id)),get(ref(db,'publicProfiles/'+id))]);return {...(s.val()||{}),...(p.val()||{})}}
 async function renderFriends(){
@@ -78,9 +83,10 @@ async function renderFriends(){
       const meta=document.createElement('span');meta.textContent=(presence?'🟢 Онлайн':'⚫ Не в сети')+' · '+classLabel(p.classId)+' · Ур. '+(p.level||1);
       title.append(n,meta);
       const actions=document.createElement('div');actions.className='friend-actions';
-      const invite=document.createElement('button');invite.className='secondary';invite.textContent='Добавить в группу';invite.onclick=()=>inviteToGroup(friendUid,p.nickname||'Игрок');
+      const invite=document.createElement('button');invite.className='secondary';invite.textContent='Пригласить в группу';invite.onclick=()=>inviteToGroup(friendUid,p.nickname||'Игрок');
       const dm=document.createElement('button');dm.className='primary';dm.textContent='Личные сообщения';dm.onclick=()=>openDm(friendUid,p.nickname||'Игрок');
-      actions.append(invite,dm);row.append(title,actions);box.append(row);
+      const removeFriendButton=document.createElement('button');removeFriendButton.className='danger';removeFriendButton.textContent='Удалить из друзей';removeFriendButton.onclick=()=>removeFriend(friendUid,p.nickname||'Игрок');
+      actions.append(invite,dm,removeFriendButton);row.append(title,actions);box.append(row);
     }
   }catch(error){box.textContent='Не удалось загрузить друзей: '+(error.code||error.message)}
 }
@@ -109,7 +115,7 @@ async function renderGroup(){
   const list=document.createElement('div');list.className='group-slots';
   for(let i=0;i<5;i++){const m=members[i],slot=document.createElement('div');slot.className='group-slot';slot.textContent=m?(i+1+'. '+m.nickname+' · '+classLabel(m.classId)+' · ур. '+m.level):(i+1+'. Свободное место');list.append(slot)}
   const settings=document.createElement('div');settings.className='group-settings';settings.hidden=group.leaderUid!==uid;settings.innerHTML='<label><input type="checkbox" id="groupBattleToggle" checked> Групповое сражение</label><label><input type="checkbox" id="groupMapToggle"> Показывать игроков на карте</label>';
-  const leave=document.createElement('button');leave.className='danger full';leave.textContent='Покинуть группу';leave.onclick=leaveGroup;
+  const leave=document.createElement('button');leave.className='danger full';leave.textContent=group.leaderUid===uid?'Распустить группу':'Покинуть группу';leave.onclick=leaveGroup;
   $('groupDetails').replaceChildren(head,codeRow,list,settings,leave);
   const battleToggle=$('groupBattleToggle');battleToggle.checked=group.groupBattleEnabled!==false;battleToggle.onchange=()=>{if(group.leaderUid===uid)update(ref(db,'groups/'+code),{groupBattleEnabled:battleToggle.checked});else battleToggle.checked=group.groupBattleEnabled!==false};const mapToggle=$('groupMapToggle');mapToggle.checked=group.showPlayersOnMap===true;mapToggle.onchange=()=>{if(group.leaderUid===uid){group.showPlayersOnMap=mapToggle.checked;publishGroupMapState();update(ref(db,'groups/'+code),{showPlayersOnMap:mapToggle.checked}).catch(error=>{mapToggle.checked=!mapToggle.checked;group.showPlayersOnMap=mapToggle.checked;publishGroupMapState();message('groupFeedback','Не удалось сохранить настройку: '+(error.code||error.message))})}else mapToggle.checked=group.showPlayersOnMap===true};publishGroupMapState();
 }
@@ -121,28 +127,96 @@ async function joinGroup(){
     await set(ref(db,'groupMembers/'+uid),code);window.dispatchEvent(new Event('game:group-changed'));$('groupCodeInput').value='';renderGroup();
   }catch(error){message('groupFeedback','Не удалось вступить: '+(error.code||error.message))}
 }
+async function removeFriend(friendUid,nickname){
+  if(!uid||!friendUid)return;
+  if(!confirm('Удалить '+nickname+' из друзей?'))return;
+  try{
+    await set(ref(db,'friends/'+uid+'/'+friendUid),null);
+    await set(push(ref(db,'mail/'+friendUid)),{type:'friend-removed',fromUid:uid,fromName:profile?.nickname||'Игрок',text:'Игрок '+(profile?.nickname||'Игрок')+' удалил вас из друзей.',createdAt:Date.now(),read:false});
+    renderFriends();
+  }catch(error){message('friendFeedback','Не удалось удалить друга: '+(error.code||error.message))}
+}
 async function inviteToGroup(friendUid,nickname){
-  if(!uid){return}
-  try{const s=await get(ref(db,'groupMembers/'+uid)),code=s.val();if(!code){alert('Сначала создай группу или вступи в неё.');return} const currentGroup=await get(ref(db,'groups/'+code));if(currentGroup.val()?.leaderUid!==uid){alert('Приглашать игроков может только создатель группы.');return}
-    await set(push(ref(db,'mail/'+friendUid)),{type:'group-invite',fromUid:uid,fromName:profile?.nickname||'Игрок',groupCode:code,text:'Приглашение в группу от '+(profile?.nickname||'Игрок'),createdAt:Date.now(),read:false});
+  if(!uid)return;
+  try{
+    const [membership,friendship]=await Promise.all([get(ref(db,'groupMembers/'+uid)),get(ref(db,'friends/'+uid+'/'+friendUid))]);
+    const code=membership.val();
+    if(!code){alert('Сначала создай группу.');return}
+    if(!friendship.exists()){alert('Приглашать можно только игрока из списка друзей.');return}
+    const currentGroup=await get(ref(db,'groups/'+code)),data=currentGroup.val();
+    if(!data||data.leaderUid!==uid){alert('Приглашать игроков может только создатель своей активной группы.');return}
+    const targetMembership=await get(ref(db,'groupMembers/'+friendUid));
+    if(targetMembership.exists()){alert('Этот игрок уже состоит в группе.');return}
+    await set(push(ref(db,'mail/'+friendUid)),{type:'group-invite',fromUid:uid,fromName:profile?.nickname||'Игрок',groupCode:code,text:'Игрок '+(profile?.nickname||'Игрок')+' приглашает вас в группу.',createdAt:Date.now(),read:false});
     alert('Приглашение отправлено игроку '+nickname+' на почту.');
   }catch(error){alert('Не удалось отправить приглашение: '+(error.code||error.message))}
 }
 async function leaveGroup(){
   const code=group?.code;if(!code)return;
-  try{await update(ref(db,'groups/'+code+'/members'),{[uid]:null});await set(ref(db,'groupMembers/'+uid),null);window.dispatchEvent(new Event('game:group-changed'));
-    const s=await get(ref(db,'groups/'+code+'/members'));if(!s.exists())await set(ref(db,'groups/'+code),null);
-    else if(group.leaderUid===uid){const next=Object.keys(s.val())[0];await update(ref(db,'groups/'+code),{leaderUid:next,leaderName:s.val()[next].nickname})}
+  try{
+    if(group.leaderUid===uid){
+      await set(ref(db,'groups/'+code),null);
+      await set(ref(db,'groupMembers/'+uid),null);
+      window.dispatchEvent(new Event('game:group-changed'));
+      group=null;
+      renderGroup();
+      message('groupFeedback','Группа распущена.');
+      return;
+    }
+    await update(ref(db,'groups/'+code+'/members'),{[uid]:null});
+    await set(ref(db,'groupMembers/'+uid),null);
+    window.dispatchEvent(new Event('game:group-changed'));
     renderGroup();
-  }catch(error){message('groupFeedback','Ошибка выхода: '+(error.code||error.message))}
+  }catch(error){message('groupFeedback','Ошибка выхода или роспуска: '+(error.code||error.message))}
 }
+async function acceptGroupInvitation(id,code){
+  try{
+    const [current,groupSnapshot]=await Promise.all([get(ref(db,'groupMembers/'+uid)),get(ref(db,'groups/'+code))]);
+    if(current.exists()){message('groupFeedback','Ты уже состоишь в группе. Сначала покинь текущую группу.');return}
+    const target=groupSnapshot.val();
+    if(!target||!target.members||Object.keys(target.members).length>=5){message('groupFeedback','Группа больше не существует или уже заполнена.');return}
+    const result=await runTransaction(ref(db,'groups/'+code),data=>{
+      if(!data||!data.members||Object.keys(data.members).length>=5||data.members[uid])return;
+      data.members[uid]={uid,nickname:profile?.nickname||'Игрок',classId:profile?.classId||'',level:profile?.level||1,joinedAt:Date.now()};
+      return data;
+    });
+    if(!result.committed){message('groupFeedback','Не удалось вступить: группа заполнена или закрыта.');return}
+    await set(ref(db,'groupMembers/'+uid),code);
+    await set(ref(db,'mail/'+uid+'/'+id),null);
+    window.dispatchEvent(new Event('game:group-changed'));
+    group=result.snapshot.val();renderGroup();renderMail();
+  }catch(error){alert('Не удалось принять приглашение: '+(error.code||error.message))}
+}
+async function acceptFriendRequest(id,fromUid,fromName){
+  try{
+    await set(ref(db,'friends/'+uid+'/'+fromUid),{uid:fromUid,addedAt:Date.now()});
+    await set(push(ref(db,'mail/'+fromUid)),{type:'friend-accepted',fromUid:uid,fromName:profile?.nickname||'Игрок',text:'Игрок '+(profile?.nickname||'Игрок')+' принял вашу заявку в друзья.',createdAt:Date.now(),read:false});
+    await set(ref(db,'mail/'+uid+'/'+id),null);
+    renderFriends();renderMail();
+  }catch(error){alert('Не удалось принять заявку: '+(error.code||error.message))}
+}
+async function declineMail(id){try{await set(ref(db,'mail/'+uid+'/'+id),null);renderMail()}catch(error){alert('Не удалось отклонить: '+(error.code||error.message))}}
 async function renderMail(){
   const box=$('mailList');if(!box||!uid)return;
-  try{const s=await get(ref(db,'mail/'+uid));box.replaceChildren();const items=Object.entries(s.val()||{}).sort((a,b)=>(b[1].createdAt||0)-(a[1].createdAt||0));
+  try{
+    const s=await get(ref(db,'mail/'+uid));box.replaceChildren();
+    const items=Object.entries(s.val()||{}).sort((a,b)=>(b[1].createdAt||0)-(a[1].createdAt||0));
     $('mailUnread').textContent=items.filter(([,m])=>!m.read).length||'';
     if(!items.length){box.textContent='Почта пуста.';return}
-    for(const [id,m] of items){const row=document.createElement('article');row.className='mail-row';const text=document.createElement('div');text.textContent=(m.read?'':'● ')+(m.text||'Сообщение');row.append(text);
-      if(m.type==='group-invite'){const join=document.createElement('button');join.className='primary';join.textContent='Принять приглашение';join.onclick=async()=>{ $('groupCodeInput').value=m.groupCode;$('groupCodeInput').dispatchEvent(new Event('input'));await joinGroup();await set(ref(db,'mail/'+uid+'/'+id+'/read'),true)};row.append(join)}
+    for(const [id,m] of items){
+      const row=document.createElement('article');row.className='mail-row';
+      const text=document.createElement('div');text.textContent=(m.read?'':'● ')+(m.text||'Сообщение');row.append(text);
+      if(m.type==='friend-request'){
+        const actions=document.createElement('div');actions.className='mail-request-actions';
+        const accept=document.createElement('button');accept.className='primary';accept.textContent='Принять';accept.onclick=()=>acceptFriendRequest(id,m.fromUid,m.fromName||'Игрок');
+        const decline=document.createElement('button');decline.className='danger';decline.textContent='Отказать';decline.onclick=()=>declineMail(id);
+        actions.append(accept,decline);row.append(actions);
+      }else if(m.type==='group-invite'){
+        const actions=document.createElement('div');actions.className='mail-request-actions';
+        const accept=document.createElement('button');accept.className='primary';accept.textContent='Принять';accept.onclick=()=>acceptGroupInvitation(id,m.groupCode);
+        const decline=document.createElement('button');decline.className='danger';decline.textContent='Отказать';decline.onclick=()=>declineMail(id);
+        actions.append(accept,decline);row.append(actions);
+      }
       const date=document.createElement('small');date.textContent=new Date(m.createdAt||Date.now()).toLocaleString('ru-RU');row.append(date);box.append(row);
     }
   }catch(error){box.textContent='Почта недоступна: '+(error.code||error.message)}
@@ -156,7 +230,42 @@ async function watchDm(){
 function appendDm(m){const p=document.createElement('p');p.className=m.fromUid===uid?'mine':'';p.textContent=(m.fromName||'Игрок')+': '+m.text+' · '+new Date(m.createdAt||Date.now()).toLocaleString('ru-RU');$('dmMessages')?.append(p)}
 async function sendDm(){const input=$('dmInput'),text=clean(input.value);if(!uid||!activeDm||!text)return;try{const item={fromUid:uid,fromName:profile?.nickname||'Игрок',text,createdAt:Date.now()};await Promise.all([set(push(ref(db,'directMessages/'+uid+'/'+activeDm)),item),set(push(ref(db,'directMessages/'+activeDm+'/'+uid)),item)]);input.value=''}catch(error){alert('Не удалось отправить сообщение: '+(error.code||error.message))}}
 function publishGroupMapState(){const enabled=!!(group&&group.leaderUid&&group.showPlayersOnMap===true);const members=Object.values(group?.members||{}).filter(m=>m.uid&&m.uid!==uid).map(m=>({uid:m.uid,nickname:m.nickname||'Игрок',classId:m.classId||'adventurer'}));window.dispatchEvent(new CustomEvent('game:group-map-state',{detail:{enabled,members}}))}
-let unsubscribeGroup=null,publicProfileTimer=null;function watchSocial(){for(const stop of unsubscribers)if(typeof stop==='function')stop();unsubscribers=[];if(unsubscribeGroup){unsubscribeGroup();unsubscribeGroup=null}unsubscribers.push(onValue(ref(db,'friends/'+uid),s=>{friends=s.val()||{};renderFriends()}));unsubscribers.push(onValue(ref(db,'mail/'+uid),()=>renderMail()));unsubscribers.push(onValue(ref(db,'groupMembers/'+uid),s=>{const code=s.val();if(unsubscribeGroup){unsubscribeGroup();unsubscribeGroup=null}if(!code){group=null;publishGroupMapState();renderGroup();return}unsubscribeGroup=onValue(ref(db,'groups/'+code),g=>{group=g.val();publishGroupMapState();renderGroup()})}));unsubscribers.push(onValue(ref(db,'players'),s=>{onlinePlayers=s.val()||{};publishGroupMapState();window.dispatchEvent(new CustomEvent('game:group-online-players',{detail:onlinePlayers}))}))}
+let unsubscribeGroup=null,publicProfileTimer=null,processingRelationshipMail=false;
+async function processRelationshipMail(snapshot){
+  if(processingRelationshipMail||!uid)return;
+  processingRelationshipMail=true;
+  try{
+    const jobs=[];
+    snapshot.forEach(child=>{
+      const item=child.val();
+      if(!item||!['friend-accepted','friend-removed'].includes(item.type)||!item.fromUid)return;
+      jobs.push((async()=>{
+        if(item.type==='friend-accepted')await set(ref(db,'friends/'+uid+'/'+item.fromUid),{uid:item.fromUid,addedAt:item.createdAt||Date.now()});
+        else await set(ref(db,'friends/'+uid+'/'+item.fromUid),null);
+        await set(ref(db,'mail/'+uid+'/'+child.key),null);
+      })());
+    });
+    await Promise.all(jobs);
+  }catch(error){console.warn('Relationship mail processing failed',error)}
+  finally{processingRelationshipMail=false}
+}
+function watchSocial(){
+  for(const stop of unsubscribers)if(typeof stop==='function')stop();unsubscribers=[];
+  if(unsubscribeGroup){unsubscribeGroup();unsubscribeGroup=null}
+  unsubscribers.push(onValue(ref(db,'friends/'+uid),s=>{friends=s.val()||{};renderFriends()}));
+  unsubscribers.push(onValue(ref(db,'mail/'+uid),s=>{processRelationshipMail(s);renderMail()}));
+  unsubscribers.push(onValue(ref(db,'groupMembers/'+uid),s=>{
+    const code=s.val();
+    if(unsubscribeGroup){unsubscribeGroup();unsubscribeGroup=null}
+    if(!code){group=null;publishGroupMapState();renderGroup();return}
+    unsubscribeGroup=onValue(ref(db,'groups/'+code),g=>{
+      group=g.val();
+      if(!g.exists()){set(ref(db,'groupMembers/'+uid),null).catch(error=>console.warn('Stale group membership cleanup failed',error));group=null}
+      publishGroupMapState();renderGroup();
+    });
+  }));
+  unsubscribers.push(onValue(ref(db,'players'),s=>{onlinePlayers=s.val()||{};publishGroupMapState();window.dispatchEvent(new CustomEvent('game:group-online-players',{detail:onlinePlayers}))}));
+}
 onAuthStateChanged(auth,async user=>{
   uid=user&&!user.isAnonymous?user.uid:'';
   if(!uid){profile=null;if(publicProfileTimer){clearInterval(publicProfileTimer);publicProfileTimer=null}for(const stop of unsubscribers)if(typeof stop==='function')stop();unsubscribers=[];if(unsubscribeGroup){unsubscribeGroup();unsubscribeGroup=null}group=null;publishGroupMapState();return}
