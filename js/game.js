@@ -161,10 +161,13 @@ function setupPanels(){
  const openPanelObserver=new MutationObserver(records=>{
   for(const record of records){
    const panel=record.target;
-   if(panel instanceof Element&&panel.classList.contains('floating-panel')&&!panel.classList.contains('hidden'))requestAnimationFrame(()=>centerFloatingPanel(panel));
+   if(!(panel instanceof Element)||!panel.classList.contains('floating-panel')||panel.classList.contains('hidden'))continue;
+   const before=String(record.oldValue||'').split(/\\s+/);
+   const becameVisible=before.includes('hidden')||(!before.includes('show')&&panel.classList.contains('show'));
+   if(becameVisible)requestAnimationFrame(()=>centerFloatingPanel(panel));
   }
  });
- openPanelObserver.observe(document.body,{attributes:true,attributeFilter:['class'],subtree:true});
+ openPanelObserver.observe(document.body,{attributes:true,attributeOldValue:true,attributeFilter:['class'],subtree:true});
  window.addEventListener('resize',()=>document.querySelectorAll('.floating-panel:not(#playerHud):not(.hidden)').forEach(centerFloatingPanel));
  const centerButton=$('centerBtn'),clearButton=$('clearEnemiesBtn');if(centerButton){centerButton.classList.add('center-control');document.body.append(centerButton)}if(clearButton){clearButton.classList.add('clear-enemies-control');document.body.append(clearButton)}document.querySelector('.mapbuttons')?.remove();
  if(clearButton)clearButton.addEventListener('click',()=>{if(enemy){enemy=null;enemyMarker=null;turn='player';$('enemyCard').classList.remove('show');$('combatStatus').textContent='Враги очищены. Найди нового противника.'}for(const monster of monsters)if(monster.marker)map.removeLayer(monster.marker);monsters=[];saveGame();log('Все противники удалены. Начинаем новый цикл появления врагов.','good');spawnEnemy(true);clearButton.blur()})
