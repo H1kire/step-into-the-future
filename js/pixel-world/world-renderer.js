@@ -1,4 +1,5 @@
 import { createCharacterSprite } from "./character-sprites.js?v=elite-map-10";
+import { createAmbientSprite } from "./ambient-sprites.js?v=ambient-sheet-1";
 
 export const WORLD_SIZE = 100_000;
 export const TILE_SIZE = 32;
@@ -238,30 +239,38 @@ export class PixelWorldRenderer {
         drawTile(ctx, wx, wy, this.seed, this.terrainAtlas);
       }
     }
-    if (this.propsAtlas.complete && this.propsAtlas.naturalWidth) {
-      for (let ty = 0; ty < CHUNK_TILES; ty++) {
-        for (let tx = 0; tx < CHUNK_TILES; tx++) {
-          const wx = cx * CHUNK_TILES + tx, wy = cy * CHUNK_TILES + ty;
-          const terrain = terrainAt(wx, wy, this.seed);
-          const roll = hash2(wx, wy, this.seed + 901);
-          if (terrain === "water") continue;
-          let prop = -1;
-          if ((terrain === "grass" || terrain === "forest") && roll > 0.9992) prop = 16;
-          else if ((terrain === "grass" || terrain === "forest") && roll > 0.9984) prop = 15;
-          else if ((terrain === "grass" || terrain === "forest") && roll > 0.9976) prop = 14;
-          else if ((terrain === "grass" || terrain === "forest") && roll > 0.9968) prop = 13;
-          else if ((terrain === "grass" || terrain === "forest") && roll > 0.996) prop = 12;
-          else if ((terrain === "grass" || terrain === "forest") && roll > 0.995) prop = 11;
-          else if ((terrain === "grass" || terrain === "forest") && roll > 0.994) prop = 10;
-          else if ((terrain === "grass" || terrain === "forest") && roll > 0.91) prop = roll > 0.985 ? 0 : (roll > 0.96 ? 1 : 2);
-          else if (terrain === "grass" && roll > 0.78) prop = roll > 0.88 ? 4 : 6;
-          else if (terrain === "sand" && roll > 0.97) prop = 8;
-          else if (terrain === "stone" && roll > 0.76) prop = 8;
-          else if (terrain === "forest" && roll > 0.78) prop = roll > 0.87 ? 9 : 3;
-          if (prop >= 0) {
-            const px = wx * TILE_SIZE, py = wy * TILE_SIZE;
-            ctx.drawImage(this.propsAtlas, prop * 32, 0, 32, 32, px, py - 2, TILE_SIZE, TILE_SIZE + 2);
-          }
+    for (let ty = 0; ty < CHUNK_TILES; ty++) {
+      for (let tx = 0; tx < CHUNK_TILES; tx++) {
+        const wx = cx * CHUNK_TILES + tx, wy = cy * CHUNK_TILES + ty;
+        const terrain = terrainAt(wx, wy, this.seed);
+        const roll = hash2(wx, wy, this.seed + 901);
+        if (terrain === "water") continue;
+        let kind = null;
+        if (terrain === "grass" || terrain === "forest") {
+          if (roll > .99975) kind = "fox";
+          else if (roll > .9995) kind = "chicken";
+          else if (roll > .9992) kind = "cow";
+          else if (roll > .9985) kind = "shrine";
+          else if (roll > .9978) kind = "banner";
+          else if (roll > .997) kind = "wagon";
+          else if (roll > .996) kind = "chest";
+          else if (roll > .994) kind = "campfire";
+          else if (roll > .992) kind = "lantern";
+          else if (roll > .99) kind = "sign";
+          else if (roll > .987) kind = "fence";
+          else if (roll > .984) kind = "crystal";
+          else if (roll > .978) kind = "mushroom";
+          else if (roll > .97) kind = "flowerPink";
+          else if (roll > .962) kind = "flowerBlue";
+          else if (roll > .954) kind = "flowerYellow";
+          else if (roll > .91) kind = terrain === "forest" ? (roll > .96 ? "pine" : "tree") : (roll > .95 ? "bush" : "tree");
+          else if (terrain === "grass" && roll > .78) kind = roll > .88 ? "grass" : "flower";
+          else if (terrain === "forest" && roll > .78) kind = roll > .87 ? "stump" : "bush";
+        } else if (terrain === "sand" && roll > .97) kind = "log";
+        else if (terrain === "stone" && roll > .76) kind = roll > .93 ? "crystal" : "rock";
+        if (kind) {
+          const px = wx * TILE_SIZE, py = wy * TILE_SIZE;
+          ctx.drawImage(createAmbientSprite(kind), px, py - 2, TILE_SIZE, TILE_SIZE + 2);
         }
       }
     }
