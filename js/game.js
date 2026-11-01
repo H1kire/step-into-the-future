@@ -95,7 +95,9 @@ function setupPanels(){
   panel.style.setProperty('--panel-width',`${rect.width}px`);
   const left=Math.max(8,Math.min(innerWidth-rect.width-8,rect.left));
   const top=Math.max(document.querySelector('header')?.getBoundingClientRect().bottom||0,rect.top);
+  const availableHeight=Math.max(40,innerHeight-8-top);
   panel.style.left=`${left}px`;panel.style.top=`${top}px`;panel.style.right='auto';panel.style.bottom='auto';
+  panel.style.setProperty('--panel-left',`${left}px`);panel.style.setProperty('--panel-top',`${top}px`);panel.style.setProperty('--panel-max-height',`${availableHeight}px`);
   touchPanelDrag={panel,pointerId:e.pointerId,offsetX:e.clientX-left,offsetY:e.clientY-top};
   suppressPanelClick=true;e.preventDefault();e.stopPropagation();
   try{panel.setPointerCapture(e.pointerId)}catch{}
