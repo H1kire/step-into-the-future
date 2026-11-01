@@ -34,9 +34,15 @@ function queueCloudSave(save, force = false) {
   if (!save || typeof save !== 'object') return;
   pendingCloudSave = save;
   if (!cloudReady || !cloudUid || (!cloudAutoSaveEnabled && !force)) return;
-  const delay = force ? 0 : Math.max(0, 60000 - (Date.now() - lastCloudWriteAt));
+  // Do not restart the minute timer on every render/save event. Otherwise
+  // frequent state updates can postpone cloud autosave forever.
+  if (cloudSaveTimer && !force) return;
   if (cloudSaveTimer) clearTimeout(cloudSaveTimer);
-  cloudSaveTimer = setTimeout(() => flushCloudSave(force), delay);
+  const delay = force ? 0 : Math.max(0, 60000 - (Date.now() - lastCloudWriteAt));
+  cloudSaveTimer = setTimeout(() => {
+    cloudSaveTimer = null;
+    flushCloudSave(force);
+  }, delay);
 }
 window.addEventListener('game:save-request', event => queueCloudSave(event.detail?.save));
 window.addEventListener('game:cloud-autosave-setting', event => {
@@ -298,13 +304,29 @@ onAuthStateChanged(auth, async user => {
       watchProfile(user);
       try {
         const cloudSnapshot = await get(ref(database, 'gameSaves/' + user.uid));
-        if (cloudSnapshot.exists() && cloudSnapshot.val()?.data && typeof cloudSnapshot.val().data === 'object') {
-          window.dispatchEvent(new CustomEvent('game:cloud-load', { detail: { save: cloudSnapshot.val().data, updatedAt: cloudSnapshot.val().updatedAt || 0 } }));
-          pendingCloudSave = null; lastCloudWriteAt = Date.now();
-        } else {
-          let localSave = null;
-          try { localSave = JSON.parse(localStorage.getItem(GAME_SAVE_KEY) || 'null'); } catch {}
-          if (localSave) pendingCloudSave = localSave;
+        let localSave = null;
+        try { localSave = JSON.parse(localStorage.getItem(GAME_SAVE_KEY) || 'null'); } catch {}
+        const cloudSave = cloudSnapshot.exists() && cloudSnapshot.val()?.data && typeof cloudSnapshot.val().data === 'object'
+          ? cloudSnapshot.val().data
+          : null;
+        if (cloudSave) {
+          const cloudSavedAt = Number(cloudSave.lastSimulationAt) || 0;
+          const localSavedAt = Number(localSave?.lastSimulationAt) || 0;
+          window.dispatchEvent(new CustomEvent('game:cloud-load', { detail: { save: cloudSave, updatedAt: cloudSnapshot.val()?.updatedAt || 0 } }));
+          lastCloudWriteAt = Date.now();
+          if (!localSave || cloudSavedAt > localSavedAt) {
+            // Restore the newest cloud snapshot automatically on this device.
+            window.dispatchEvent(new CustomEvent('game:cloud-restore', { detail: { save: cloudSave, updatedAt: cloudSnapshot.val()?.updatedAt || 0 } }));
+            pendingCloudSave = null;
+          } else if (localSavedAt > cloudSavedAt) {
+            // This device has newer progress; queue it for upload instead of
+            // silently replacing it with an older cloud snapshot.
+            pendingCloudSave = localSave;
+          } else {
+            pendingCloudSave = null;
+          }
+        } else if (localSave) {
+          pendingCloudSave = localSave;
         }
         cloudReady = true;
         if (cloudSaveTimer) clearTimeout(cloudSaveTimer);
