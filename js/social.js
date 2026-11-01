@@ -244,7 +244,22 @@ async function watchDm(){
 }
 function appendDm(m){const p=document.createElement('p');p.className=m.fromUid===uid?'mine':'';p.textContent=(m.fromName||'Игрок')+': '+m.text+' · '+new Date(m.createdAt||Date.now()).toLocaleString('ru-RU');$('dmMessages')?.append(p)}
 async function sendDm(){const input=$('dmInput'),text=clean(input.value);if(!uid||!activeDm||!text)return;try{const item={fromUid:uid,fromName:profile?.nickname||'Игрок',text,createdAt:Date.now()};await Promise.all([set(push(ref(db,'directMessages/'+uid+'/'+activeDm)),item),set(push(ref(db,'directMessages/'+activeDm+'/'+uid)),item)]);input.value=''}catch(error){alert('Не удалось отправить сообщение: '+(error.code||error.message))}}
-function publishGroupMapState(){const enabled=!!(group&&group.leaderUid&&group.showPlayersOnMap===true);const members=Object.values(group?.members||{}).filter(m=>m.uid&&m.uid!==uid).map(m=>({uid:m.uid,nickname:m.nickname||'Игрок',classId:m.classId||'adventurer'}));window.dispatchEvent(new CustomEvent('game:group-map-state',{detail:{enabled,members}}))}
+let groupMapPublishToken=0;
+async function publishGroupMapState(){
+  const token=++groupMapPublishToken,currentGroup=group;
+  const enabled=!!(currentGroup&&currentGroup.leaderUid&&currentGroup.showPlayersOnMap===true);
+  const roster=Object.values(currentGroup?.members||{}).filter(member=>member.uid&&member.uid!==uid);
+  const profiles=await Promise.all(roster.map(async member=>{
+    try{return (await get(ref(db,'publicProfiles/'+member.uid))).val()||{}}
+    catch(error){console.warn('Group map profile read failed',member.uid,error);return {}}
+  }));
+  if(token!==groupMapPublishToken||currentGroup!==group)return;
+  const members=roster.map((member,index)=>{
+    const classId=profiles[index]?.classId||member.classId||'adventurer';
+    return {uid:member.uid,nickname:member.nickname||profiles[index]?.nickname||'Игрок',classId:['adventurer','warrior','archer','mage'].includes(classId)?classId:'adventurer'};
+  });
+  window.dispatchEvent(new CustomEvent('game:group-map-state',{detail:{enabled,members}}));
+}
 let unsubscribeGroup=null,publicProfileTimer=null,processingRelationshipMail=false;
 async function processRelationshipMail(snapshot){
   if(processingRelationshipMail||!uid)return;

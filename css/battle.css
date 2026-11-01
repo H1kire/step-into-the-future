@@ -36,4 +36,28 @@
 .group-player-fighter.own-fighter{border-color:#73e0a0;box-shadow:0 0 0 1px #73e0a055,0 12px 28px #0005}
 .group-player-fighter.current-turn{border-color:#ffd166;box-shadow:0 0 0 2px #ffd16666,0 0 22px #ffd16622}
 .group-arena .enemy-fighter{height:fit-content;position:sticky;top:12px}
-@media(max-width:760px){.group-arena{grid-template-columns:1fr;gap:12px;padding:12px}.group-arena>.versus{font-size:14px}.group-party{grid-template-columns:repeat(auto-fit,minmax(145px,1fr))}.group-arena .enemy-fighter{position:static}.group-player-fighter .sprite-stage{height:85px}}
+@media(max-width:760px){
+ .group-arena{
+  display:grid;grid-template-columns:max-content 22px max-content;align-items:stretch;
+  justify-content:start;gap:8px;padding:12px;min-height:unset;
+  overflow-x:auto;overflow-y:hidden;overscroll-behavior-x:contain;
+  -webkit-overflow-scrolling:touch;scroll-snap-type:x proximity;
+ }
+ .group-arena>.versus{font-size:14px;align-self:center}
+ .group-party{display:flex;flex-flow:row nowrap;gap:8px;align-items:stretch}
+ .group-player-fighter{flex:0 0 150px;width:150px;padding:9px 7px;scroll-snap-align:start}
+ .group-arena .enemy-fighter{position:static;flex:0 0 165px;width:165px;padding:9px 8px;scroll-snap-align:start}
+ .group-player-fighter .sprite-stage{height:85px}
+ .group-player-fighter .sprite canvas{width:76px;height:76px}
+ .group-arena .enemy-fighter .sprite-stage{height:105px}
+}
+
+
+/* Elite enemies are visually distinct in both solo and group combat. */
+@keyframes eliteSpritePulse{
+  from{filter:drop-shadow(0 0 4px var(--elite-color)) drop-shadow(0 0 10px var(--elite-color));transform:translateY(0) scale(1)}
+  to{filter:drop-shadow(0 0 9px var(--elite-color)) drop-shadow(0 0 21px var(--elite-color));transform:translateY(-2px) scale(1.035)}
+}
+.elite-enemy-sprite canvas{animation:eliteSpritePulse 1.8s ease-in-out infinite alternate;transform-origin:50% 75%}
+.enemy-fighter.elite-boss{border-color:var(--elite-color,#d8e0e8);box-shadow:0 0 0 1px color-mix(in srgb,var(--elite-color,#d8e0e8) 42%,transparent),0 0 24px color-mix(in srgb,var(--elite-color,#d8e0e8) 24%,transparent),0 16px 45px #0005}
+@media(prefers-reduced-motion:reduce){.elite-enemy-sprite canvas{animation:none}}

@@ -160,9 +160,11 @@ export async function initializeGroupBattle({ onError } = {}) {
     if (!session || session.status !== 'active' || !session.roster?.[user.uid]) {
       throw new Error('Сражение уже завершено или ты не входишь в эту группу.');
     }
+    const stats = getLocalCombatStats();
     await update(ref(db, 'groupBattleSessions/' + sessionId + '/roster/' + user.uid), {
       status: 'ready',
-      stats: getLocalCombatStats(),
+      classId: stats.classId,
+      stats,
       joinedAt: Date.now()
     });
     return session;
@@ -403,7 +405,14 @@ export async function startGroupBattlePage() {
       '<div class="bar-label"><span>⚔️ Урон</span><b id="groupEnemyAttack"></b></div>' +
       '<div class="bar-label"><span>🛡 Защита</span><b id="groupEnemyDefense"></b></div>' +
     '</section>';
-  try { $('groupEnemySprite').append(createMonsterSprite(initial.enemy.imageKey || 'slime', 3)); } catch {}
+  try {
+    const eliteColors = { common:'#d8e0e8', uncommon:'#57e68a', rare:'#55a9ff', epic:'#c16aff', legendary:'#ffb84d' };
+    const enemySprite = $('groupEnemySprite');
+    enemySprite.classList.add('elite-enemy-sprite');
+    enemySprite.style.setProperty('--elite-color', eliteColors[initial.enemy.eliteKey] || '#d8e0e8');
+    enemySprite.closest('.enemy-fighter')?.classList.add('elite-boss');
+    enemySprite.append(createMonsterSprite(initial.enemy.imageKey || 'slime', 3));
+  } catch {}
   $('playerLevelTop').textContent = 'Групповой бой';
   $('turnTrack').innerHTML = '<div class="turn-step active" id="groupRoundStep"><span>1</span><b>Подготовка</b></div><span class="turn-arrow">→</span><div class="turn-step" id="groupEnemyStep"><span>2</span><b>Атака монстра</b></div>';
   const note = (message, kind) => {
@@ -433,7 +442,7 @@ export async function startGroupBattlePage() {
       const spriteBox = document.createElement('div');
       spriteBox.className = 'sprite';
       sprite.append(spriteBox);
-      try { spriteBox.append(createCharacterSprite(player.classId || 'adventurer', 3)); } catch {}
+      try { spriteBox.append(createCharacterSprite(stats.classId || player.classId || 'adventurer', 3)); } catch {}
       const title = document.createElement('h2');
       title.textContent = player.nickname + (uid === user.uid ? ' · Ты' : '');
       const level = document.createElement('div');

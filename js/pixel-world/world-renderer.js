@@ -333,6 +333,25 @@ export class PixelWorldRenderer {
       const ew = (entity.sprite.width || entity.width || 16) * zoom, eh = (entity.sprite.height || entity.height || 20) * zoom;
       ctx.fillStyle = "#17211c"; ctx.fillRect(Math.round(ex - 6 * zoom), Math.round(ey + 6 * zoom), Math.ceil(12 * zoom), Math.ceil(3 * zoom));
       ctx.drawImage(entity.sprite, Math.round(ex - ew / 2), Math.round(ey - eh * 0.72), Math.round(ew), Math.round(eh));
+      if (entity.type === "player" && entity.name) {
+        const label = String(entity.name).slice(0, 24);
+        const fontSize = Math.max(9, Math.min(13, 11 * zoom));
+        ctx.save();
+        ctx.font = `700 ${fontSize}px system-ui, sans-serif`;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "bottom";
+        const labelWidth = Math.min(ctx.measureText(label).width + 12 * zoom, 180 * zoom);
+        const labelY = Math.round(ey - eh * 0.82 - 5 * zoom);
+        ctx.fillStyle = "rgba(8, 15, 24, .88)";
+        ctx.strokeStyle = "rgba(120, 210, 255, .8)";
+        ctx.lineWidth = Math.max(1, zoom * .65);
+        ctx.beginPath();
+        ctx.roundRect(Math.round(ex - labelWidth / 2), labelY - fontSize - 3 * zoom, Math.round(labelWidth), fontSize + 6 * zoom, 4 * zoom);
+        ctx.fill(); ctx.stroke();
+        ctx.fillStyle = "#f2f8ff";
+        ctx.fillText(label, Math.round(ex), labelY - 2 * zoom, 170 * zoom);
+        ctx.restore();
+      }
     }
     const px = (this.player.x - left) * zoom, py = (this.player.y - top) * zoom;
     // Hard-edged pixel shadow, sprite and ground-facing highlight.
