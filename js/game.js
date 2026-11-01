@@ -508,7 +508,35 @@ render();
 enterPixelWorld();
  window.addEventListener('pagehide',saveGame);document.addEventListener('visibilitychange',()=>{if(document.hidden)saveGame()});
 window.addEventListener('game:cloud-load',event=>{const remote=event.detail?.save;if(remote&&typeof remote==='object')window.dispatchEvent(new CustomEvent('game:cloud-save-available',{detail:{updatedAt:event.detail?.updatedAt||0}}))});
-window.addEventListener('game:cloud-restore',event=>{const remote=event.detail?.save;if(!remote||typeof remote!=='object')return;try{localStorage.setItem(SAVE_KEY,JSON.stringify(remote));window.dispatchEvent(new CustomEvent('game:cloud-restore-status',{detail:{ok:true}}));window.location.reload()}catch(error){console.error('Cloud save restore failed',error);window.dispatchEvent(new CustomEvent('game:cloud-restore-status',{detail:{ok:false,message:String(error?.message||error)}}))}});
+window.addEventListener('game:cloud-restore',event=>{
+ const remote=event.detail?.save;
+ if(!remote||typeof remote!=='object')return;
+ try{
+  const serialized=JSON.stringify(remote);
+  const signature=[remote.schemaVersion||0,remote.lastSimulationAt||0,remote.savedAt||0,remote.state?.level||0,remote.state?.xp||0,serialized.length].join(':');
+  const guardKey='gorodskie-stranniki-cloud-restore-once';
+  // Auth initialization can emit the same cloud snapshot after every page load.
+  // If this exact snapshot already triggered the current tab's reload, do not
+  // reload again: the previous reload has already booted from this snapshot.
+  if(sessionStorage.getItem(guardKey)===signature){
+   sessionStorage.removeItem(guardKey);
+   window.dispatchEvent(new CustomEvent('game:cloud-restore-status',{detail:{ok:true,alreadyApplied:true}}));
+   return;
+  }
+  const current=localStorage.getItem(SAVE_KEY);
+  if(current===serialized){
+   window.dispatchEvent(new CustomEvent('game:cloud-restore-status',{detail:{ok:true,alreadyApplied:true}}));
+   return;
+  }
+  localStorage.setItem(SAVE_KEY,serialized);
+  sessionStorage.setItem(guardKey,signature);
+  window.dispatchEvent(new CustomEvent('game:cloud-restore-status',{detail:{ok:true}}));
+  window.location.reload();
+ }catch(error){
+  console.error('Cloud save restore failed',error);
+  window.dispatchEvent(new CustomEvent('game:cloud-restore-status',{detail:{ok:false,message:String(error?.message||error)}}));
+ }
+});
 $('cloudAutoSaveToggle')?.addEventListener('change',event=>{const enabled=!!event.target.checked;localStorage.setItem('game-cloud-autosave-v1',String(enabled));$('cloudSaveNowBtn').hidden=false;window.dispatchEvent(new CustomEvent('game:cloud-autosave-setting',{detail:{enabled}}));$('cloudSaveFeedback').textContent=enabled?'Автосохранение включено: прогресс отправляется в облако каждые 60 секунд.':'Автосохранение отключено. Используй кнопку ручного сохранения.'});
 $('cloudRestoreBtn')?.addEventListener('click',()=>{const button=$('cloudRestoreBtn');button.disabled=true;button.textContent='Загружаем сохранение…';const feedback=$('cloudSaveFeedback');if(feedback){feedback.textContent='Получаем сохранение из облака…';feedback.style.color='var(--muted)'}window.dispatchEvent(new CustomEvent('game:cloud-restore-request'))});
 $('cloudSaveNowBtn')?.addEventListener('click',()=>{saveGame();const feedback=$('cloudSaveFeedback');if(feedback){feedback.textContent='Отправляем текущее сохранение в облако…';feedback.style.color='var(--muted)'}const button=$('cloudSaveNowBtn');button.disabled=true;window.dispatchEvent(new CustomEvent('game:manual-cloud-save-request'))});
