@@ -157,3 +157,14 @@ header{position:fixed;inset:0 0 auto;height:calc(58px + env(safe-area-inset-top,
 .mail-request-actions button{min-height:38px}
 .friend-actions{grid-template-columns:repeat(2,minmax(0,1fr))}
 @media(max-width:420px){.mail-request-actions button,.friend-actions button{min-height:36px;padding:7px 4px;font-size:10px}}
+
+
+/* Dedicated mobile renderer for primary game windows.
+   Desktop panels keep the original fixed-position centering system. */
+#mobileMainPanelLayer{display:none}
+@media(max-width:780px){
+ #mobileMainPanelLayer{position:fixed;inset:calc(54px + env(safe-area-inset-top,0px)) 0 calc(8px + env(safe-area-inset-bottom,0px));z-index:4400;display:grid;place-items:center;overflow:hidden;pointer-events:none;isolation:isolate}
+ #mobileMainPanelLayer>.floating-panel{position:relative!important;inset:auto!important;left:auto!important;right:auto!important;top:auto!important;bottom:auto!important;transform:none!important;margin:0!important;width:min(420px,calc(100% - 16px))!important;max-width:calc(100% - 16px)!important;max-height:calc(100% - 16px)!important;overflow:auto;pointer-events:auto;align-self:center;justify-self:center}
+ #mobileMainPanelLayer>#bagPanel{width:min(495px,calc(100% - 16px))!important}
+ #mobileMainPanelLayer>.enemy.floating-panel{width:min(360px,calc(100% - 16px))!important}
+}

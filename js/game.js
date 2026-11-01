@@ -60,6 +60,7 @@ function scheduleSave(){clearTimeout(saveTimer);saveTimer=setTimeout(saveGame,35
 let monsterSpawnCount=Math.max(0,Math.floor(Number(savedGame.monsterSpawnCount)||0));
 let devMode=false,isDeveloper=false,turn='player',lastAttack=0,combatId=0,activeItemDrag=null,activeInventoryScroll=null,inventoryPage=0;
 function setupPanels(){
+ window.isMobileGameDevice=()=>!!(window.matchMedia?.('(pointer: coarse)').matches||/Android|iPhone|iPad|iPod/i.test(navigator.userAgent));
  const aside=document.querySelector('aside');
  const playerHud=aside.querySelector(':scope > .card:first-child');playerHud.id='playerHud';playerHud.classList.add('floating-panel');document.body.append(playerHud);
  const merchantPanel=aside.querySelector('#merchantPanel');merchantPanel.style.left=innerWidth<=780?'8px':`${Math.max(12,(innerWidth-430)/2)}px`;merchantPanel.style.top=innerWidth<=780?'8vh':'12vh';merchantPanel.style.transform='none';
@@ -73,7 +74,7 @@ function setupPanels(){
  const panels=[['logPanel','log','📜 Журнал'],['bagPanel','equip','🎒 Снаряжение'],['chatPanel','chat','💬 Чат поблизости']];
  for(const [id,selector,title] of panels){const query=selector==='log'?'.log':selector==='equip'?'#bagCount':'#chatlog';const card=aside.querySelector(query).closest('.card');card.id=id;card.classList.add('floating-panel','hidden');card.style.left=`${startLeft}px`;card.style.top='74px';const bar=document.createElement('div');bar.className='panel-title';bar.innerHTML=`<h2>${title}</h2><button type="button" class="secondary panel-close">✕</button>`;card.querySelector('h2').replaceWith(bar);document.body.append(card)}
  $('devToolsCard')?.remove();const combat=aside.querySelector('#enemyCard');combat.classList.add('floating-panel');combat.style.left=`${startLeft}px`;combat.style.top='74px';const combatTitle=document.createElement('div');combatTitle.className='panel-title';combatTitle.innerHTML='<h2>Обнаружен противник!</h2><button type="button" class="secondary combat-close" aria-label="Прекратить бой и закрыть окно" title="Прекратить бой">✕</button>';combat.querySelector('h2').replaceWith(combatTitle);combatTitle.querySelector('.combat-close').addEventListener('click',closeCombat);
- menu.querySelectorAll('[data-open]').forEach(button=>button.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();if(button.dataset.open==='devPanel'&&!isDeveloper)return;const panel=$(button.dataset.open);if(!panel)return;menu.classList.add('hidden');menuButton.setAttribute('aria-expanded','false');if(innerWidth<=780)document.querySelectorAll('#logPanel,#bagPanel,#chatPanel,#statsPanel,#abilityTreePanel,#accountPanel,#devPanel').forEach(p=>p.classList.add('hidden'));panel.classList.remove('hidden');panel.style.zIndex='4500';if(button.dataset.open==='statsPanel')renderStats()}));
+ menu.querySelectorAll('[data-open]').forEach(button=>button.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();if(button.dataset.open==='devPanel'&&!isDeveloper)return;const panel=$(button.dataset.open);if(!panel)return;menu.classList.add('hidden');menuButton.setAttribute('aria-expanded','false');if(window.isMobileGameDevice?.())document.querySelectorAll('#logPanel,#bagPanel,#chatPanel,#statsPanel,#abilityTreePanel,#accountPanel,#devPanel,#ascensionPanel,#friendsPanel,#groupPanel,#mailPanel').forEach(p=>p.classList.add('hidden'));panel.classList.remove('hidden');panel.style.zIndex='4500';if(button.dataset.open==='statsPanel')renderStats()}));
  document.querySelectorAll('.panel-close').forEach(button=>button.addEventListener('click',e=>{e.preventDefault();e.stopPropagation();button.closest('.floating-panel').classList.add('hidden');if(button.closest('#actionMenu'))menuButton.setAttribute('aria-expanded','false')}));
  const fitPanelToViewport=(panel,top=panel.getBoundingClientRect().top)=>{
   if(panel.id==='playerHud')return;
@@ -149,8 +150,25 @@ function setupPanels(){
   }
  });
  floatingPanelObserver.observe(document.body,{childList:true,subtree:true});
+ const mobileMainPanelIds=new Set(['logPanel','bagPanel','chatPanel','statsPanel','abilityTreePanel','accountPanel','devPanel','ascensionPanel','friendsPanel','groupPanel','mailPanel','merchantPanel','priestPanel','enemyCard']);
+ let mobileMainPanelLayer=null;
+ const getMobileMainPanelLayer=()=>{
+  if(mobileMainPanelLayer?.isConnected)return mobileMainPanelLayer;
+  mobileMainPanelLayer=document.getElementById('mobileMainPanelLayer');
+  if(!mobileMainPanelLayer){mobileMainPanelLayer=document.createElement('div');mobileMainPanelLayer.id='mobileMainPanelLayer';mobileMainPanelLayer.setAttribute('aria-live','polite');document.body.append(mobileMainPanelLayer)}
+  return mobileMainPanelLayer;
+ };
  const centerFloatingPanel=panel=>{
   if(!panel||panel.id==='playerHud'||panel.classList.contains('hidden'))return;
+  if(window.isMobileGameDevice?.()&&mobileMainPanelIds.has(panel.id)){
+   const layer=getMobileMainPanelLayer();
+   document.querySelectorAll('#mobileMainPanelLayer > .floating-panel').forEach(other=>{if(other!==panel)other.classList.add('hidden')});
+   layer.append(panel);
+   panel.classList.add('mobile-main-panel');
+   panel.style.left='';panel.style.top='';panel.style.right='';panel.style.bottom='';panel.style.transform='';panel.style.maxHeight='';
+   return;
+  }
+  if(panel.parentElement?.id==='mobileMainPanelLayer'){document.body.append(panel);panel.classList.remove('mobile-main-panel')}
   panel.style.left='50%';
   panel.style.top='50%';
   panel.style.right='auto';

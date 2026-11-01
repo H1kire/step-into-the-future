@@ -30,7 +30,7 @@ function createUI(){
   dmContent.innerHTML='<div id="dmMessages" class="dm-messages"></div><div class="chatrow"><input id="dmInput" maxlength="500" placeholder="Сообщение…"><button class="primary" id="dmSend">➤</button></div>';
   document.addEventListener('click',e=>{
     const b=e.target.closest('[data-social-open]');if(!b)return;
-    if(innerWidth<=780)document.querySelectorAll('.social-panel').forEach(p=>p.classList.add('hidden'));
+    if(window.isMobileGameDevice?.())document.querySelectorAll('.social-panel').forEach(p=>p.classList.add('hidden'));
     $('actionMenu')?.classList.add('hidden');$('menuToggle')?.setAttribute('aria-expanded','false');
     const p=$(b.dataset.socialOpen);p?.classList.remove('hidden');p.style.zIndex='4800';
     if(b.dataset.socialOpen==='friendsPanel')renderFriends();

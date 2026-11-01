@@ -51,7 +51,7 @@
   function open() {
     document.querySelector('#actionMenu')?.classList.add('hidden');
     document.querySelector('#menuToggle')?.setAttribute('aria-expanded', 'false');
-    if (innerWidth <= 780) document.querySelectorAll('#logPanel,#bagPanel,#chatPanel,#statsPanel,#abilityTreePanel,#ascensionPanel').forEach(element => element.classList.add('hidden'));
+    if (window.isMobileGameDevice?.()) document.querySelectorAll('#logPanel,#bagPanel,#chatPanel,#statsPanel,#abilityTreePanel,#ascensionPanel,#accountPanel,#devPanel,#friendsPanel,#groupPanel,#mailPanel').forEach(element => element.classList.add('hidden'));
     panel.classList.remove('hidden'); panel.style.zIndex = '4600'; render();
   }
   trigger.addEventListener('click', open);
