@@ -346,7 +346,19 @@ const foes=[
  {name:'Светляк-дух',icon:'✨',imageKey:'wisp',hp:78,atk:17,def:5,xp:75,coins:30},
  {name:'Пещерный паук',icon:'🕷️',imageKey:'spider',hp:46,atk:13,def:2,xp:48,coins:16},
  {name:'Лесной зомби',icon:'🧟',imageKey:'zombie',hp:68,atk:14,def:3,xp:63,coins:22},
- {name:'Орк-воин',icon:'👹',imageKey:'orc',hp:92,atk:20,def:7,xp:92,coins:38}
+ {name:'Орк-воин',icon:'👹',imageKey:'orc',hp:92,atk:20,def:7,xp:92,coins:38},
+ {name:'Гоблин-лучник',icon:'🏹',imageKey:'goblin-archer',hp:52,atk:14,def:2,xp:52,coins:18},
+ {name:'Ящер',icon:'🦎',imageKey:'lizard',hp:62,atk:15,def:3,xp:58,coins:21},
+ {name:'Паук-воин',icon:'🕷️',imageKey:'spider-warrior',hp:82,atk:19,def:5,xp:78,coins:30},
+ {name:'Крыса',icon:'🐀',imageKey:'rat',hp:22,atk:7,def:0,xp:22,coins:7},
+ {name:'Крысолюд',icon:'🐀',imageKey:'ratman',hp:70,atk:17,def:4,xp:70,coins:26},
+ {name:'Паук-босс',icon:'🕸️',imageKey:'spider-boss',hp:130,atk:25,def:8,xp:125,coins:55},
+ {name:'Скелет-маг',icon:'💀',imageKey:'skeleton-mage',hp:74,atk:21,def:2,xp:86,coins:34},
+ {name:'Призрак',icon:'👻',imageKey:'ghost',hp:66,atk:20,def:1,xp:82,coins:32},
+ {name:'Демон',icon:'😈',imageKey:'demon',hp:115,atk:27,def:7,xp:135,coins:62},
+ {name:'Слизневый король',icon:'👑',imageKey:'slime-king',hp:150,atk:24,def:10,xp:150,coins:70},
+ {name:'Некромант',icon:'🧙',imageKey:'necromancer',hp:125,atk:30,def:5,xp:155,coins:76},
+ {name:'Дракончик',icon:'🐉',imageKey:'dragonling',hp:180,atk:34,def:12,xp:190,coins:95}
 ];
 function log(msg,kind=''){const p=document.createElement('p');p.textContent=msg;if(kind)p.className=kind;$('log').prepend(p);while($('log').children.length>18)$('log').lastChild.remove();scheduleSave()}
 function render(){
