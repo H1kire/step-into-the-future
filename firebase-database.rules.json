@@ -90,7 +90,7 @@
         ".write": "auth != null && auth.uid === $uid",
         ".validate": "newData.hasChildren(['data', 'updatedAt'])",
         "data": {
-          ".validate": "newData.hasChildren(['state', 'monsters'])",
+          ".validate": "newData.hasChild('state')",
           "state": {
             ".validate": "newData.hasChildren(['level', 'hp', 'maxHp', 'energy', 'maxEnergy'])",
             "$other": {
@@ -113,7 +113,7 @@
             }
           },
           "monsters": {
-            ".validate": "newData.hasChildren() || !newData.exists()"
+            ".validate": true
           },
           "$other": {
             ".validate": true
