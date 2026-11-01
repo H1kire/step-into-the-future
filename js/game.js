@@ -31,7 +31,31 @@ if((Number(state.levelStatVersion)||0)<3){if((Number(state.levelStatVersion)||0)
 state.abilityPoints=Number.isFinite(state.abilityPoints)?state.abilityPoints:Math.max(0,state.level-1);state.skillNodes=Array.isArray(state.skillNodes)?state.skillNodes.map(id=>String(id).replace(/^hero-mana-/,'hero-energy-')):[];state.goldTreeNodes=state.goldTreeNodes&&typeof state.goldTreeNodes==='object'&&!Array.isArray(state.goldTreeNodes)?state.goldTreeNodes:{};
 state.ascensionClass=typeof state.ascensionClass==='string'?state.ascensionClass:'';state.ascensionPoints=Number.isFinite(state.ascensionPoints)?state.ascensionPoints:(state.level>=10?1+Math.floor(state.level/25):0);
 const ascensionBranchIds=['warrior','archer','mage'];let savedAscensionPath=Array.isArray(state.ascensionPath)?state.ascensionPath.filter(id=>id==='adventurer'||ascensionBranchIds.includes(id)):[];if(!savedAscensionPath.length&&state.ascensionClass)savedAscensionPath=state.ascensionClass==='adventurer'?['adventurer']:['adventurer',state.ascensionClass];state.ascensionPath=savedAscensionPath[0]==='adventurer'?['adventurer',...savedAscensionPath.slice(1).filter(id=>ascensionBranchIds.includes(id)).slice(0,1)]:[];state.ascensionClass=state.ascensionPath.at(-1)||'';let lastSimulationAt=Number(savedGame.lastSimulationAt)||Date.now();const offlineElapsedMs=Math.max(0,Math.min(7*86400000,Date.now()-(Number(savedGame.lastSimulationAt)||Date.now())));if(offlineElapsedMs>0){const seconds=offlineElapsedMs/1000,attrs=state.attributes;state.hp=Math.min(state.maxHp,Math.max(0,state.hp)+state.maxHp*(.0025+attrs.vitality/100*.0005)*seconds);state.energy=Math.min(state.maxEnergy,Math.max(0,state.energy)+state.maxEnergy*(.0075+attrs.wisdom/100*.001)*seconds)}lastSimulationAt=Date.now();
-function saveGame(){try{lastSimulationAt=Date.now();const savedState={...state,godMode:false};if(state.godMode){savedState.hp=Math.min(state.hp,state.maxHp*(1+abilityBonus('health')));savedState.energy=Math.min(state.energy,state.maxEnergy*(1+abilityBonus('energy')))}const snapshot={state:savedState,pos:lastRealGpsPos,displayPos:pos,realGps:!!lastRealGpsPos,merchantPos,priestPos,log:Array.from($('log').children).map(p=>({text:p.textContent,kind:p.className})),monsters:monsters.map(({marker,...m})=>m),monsterSpawnCount,lastSimulationAt};localStorage.setItem(SAVE_KEY,JSON.stringify(snapshot));window.dispatchEvent(new CustomEvent('game:save-request',{detail:{save:snapshot}}))}catch{}}
+function saveGame(){try{
+ lastSimulationAt=Date.now();
+ const savedState={...state,godMode:false};
+ if(state.godMode){savedState.hp=Math.min(state.hp,state.maxHp*(1+abilityBonus('health')));savedState.energy=Math.min(state.energy,state.maxEnergy*(1+abilityBonus('energy')))}
+ // Serialize the complete character state, including inventory/equipment, both
+ // upgrade trees, ascension, consumables, currencies, attributes and progression.
+ const completeState=JSON.parse(JSON.stringify(savedState));
+ const snapshot={
+  schemaVersion:2,
+  state:completeState,
+  pos:lastRealGpsPos,
+  displayPos:pos,
+  realGps:!!lastRealGpsPos,
+  merchantPos,
+  priestPos,
+  log:Array.from($('log').children).map(p=>({text:p.textContent,kind:p.className})),
+  monsters:monsters.map(({marker,...m})=>m),
+  monsterSpawnCount,
+  lastSimulationAt,
+  savedAt:lastSimulationAt
+ };
+ const serialized=JSON.stringify(snapshot);
+ localStorage.setItem(SAVE_KEY,serialized);
+ window.dispatchEvent(new CustomEvent('game:save-request',{detail:{save:JSON.parse(serialized)}}));
+ }catch(error){console.error('Game save failed',error);window.dispatchEvent(new CustomEvent('game:local-save-status',{detail:{ok:false,message:String(error?.message||error)}}))}}
 function scheduleSave(){clearTimeout(saveTimer);saveTimer=setTimeout(saveGame,350)}
 let monsterSpawnCount=Math.max(0,Math.floor(Number(savedGame.monsterSpawnCount)||0));
 let devMode=false,isDeveloper=false,turn='player',lastAttack=0,combatId=0,activeItemDrag=null,activeInventoryScroll=null,inventoryPage=0;
@@ -125,7 +149,23 @@ function setupPanels(){
   }
  });
  floatingPanelObserver.observe(document.body,{childList:true,subtree:true});
- window.addEventListener('resize',()=>document.querySelectorAll('.floating-panel:not(#playerHud):not(.hidden)').forEach(panel=>fitPanelToViewport(panel)));
+ const centerFloatingPanel=panel=>{
+  if(!panel||panel.id==='playerHud'||panel.classList.contains('hidden'))return;
+  panel.style.left='50%';
+  panel.style.top='50%';
+  panel.style.right='auto';
+  panel.style.bottom='auto';
+  panel.style.transform='translate(-50%,-50%)';
+  panel.style.maxHeight='calc(100dvh - 24px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px))';
+ };
+ const openPanelObserver=new MutationObserver(records=>{
+  for(const record of records){
+   const panel=record.target;
+   if(panel instanceof Element&&panel.classList.contains('floating-panel')&&!panel.classList.contains('hidden'))requestAnimationFrame(()=>centerFloatingPanel(panel));
+  }
+ });
+ openPanelObserver.observe(document.body,{attributes:true,attributeFilter:['class'],subtree:true});
+ window.addEventListener('resize',()=>document.querySelectorAll('.floating-panel:not(#playerHud):not(.hidden)').forEach(centerFloatingPanel));
  const centerButton=$('centerBtn'),clearButton=$('clearEnemiesBtn');if(centerButton){centerButton.classList.add('center-control');document.body.append(centerButton)}if(clearButton){clearButton.classList.add('clear-enemies-control');document.body.append(clearButton)}document.querySelector('.mapbuttons')?.remove();
  if(clearButton)clearButton.addEventListener('click',()=>{if(enemy){enemy=null;enemyMarker=null;turn='player';$('enemyCard').classList.remove('show');$('combatStatus').textContent='Враги очищены. Найди нового противника.'}for(const monster of monsters)if(monster.marker)map.removeLayer(monster.marker);monsters=[];saveGame();log('Все противники удалены. Начинаем новый цикл появления врагов.','good');spawnEnemy(true);clearButton.blur()})
 }
