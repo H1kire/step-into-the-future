@@ -343,7 +343,10 @@ const foes=[
  {name:'Пещерная летучая мышь',icon:'🦇',imageKey:'bat',hp:24,atk:8,def:0,xp:28,coins:9},
  {name:'Грибной страж',icon:'🍄',imageKey:'mushroom',hp:58,atk:12,def:4,xp:52,coins:19},
  {name:'Дорожный разбойник',icon:'🗡️',imageKey:'bandit',hp:64,atk:15,def:3,xp:62,coins:25},
- {name:'Светляк-дух',icon:'✨',imageKey:'wisp',hp:78,atk:17,def:5,xp:75,coins:30}
+ {name:'Светляк-дух',icon:'✨',imageKey:'wisp',hp:78,atk:17,def:5,xp:75,coins:30},
+ {name:'Пещерный паук',icon:'🕷️',imageKey:'spider',hp:46,atk:13,def:2,xp:48,coins:16},
+ {name:'Лесной зомби',icon:'🧟',imageKey:'zombie',hp:68,atk:14,def:3,xp:63,coins:22},
+ {name:'Орк-воин',icon:'👹',imageKey:'orc',hp:92,atk:20,def:7,xp:92,coins:38}
 ];
 function log(msg,kind=''){const p=document.createElement('p');p.textContent=msg;if(kind)p.className=kind;$('log').prepend(p);while($('log').children.length>18)$('log').lastChild.remove();scheduleSave()}
 function render(){
@@ -381,7 +384,7 @@ function spawnEnemy(force=true){
  monster.id=crypto.randomUUID?crypto.randomUUID():String(Date.now()+Math.random());monster.pos=epos;placeMonsterMarker(monster);monsters.push(monster);scheduleSave();
  if(monster.elite)log(`⚠️ ЭЛИТНЫЙ ПРОТИВНИК! ${monster.name} · ${monster.eliteRarity}. Найди его на карте и нажми, чтобы начать бой.`,'bad');else log(`На карте появился противник: ${f.name}. Нажми на него, чтобы начать бой.`,'bad');render();
 }
-function monsterImageKey(monster){if(['slime','goblin','wolf','golem','skeleton','bat','mushroom','bandit','wisp'].includes(monster?.imageKey))return monster.imageKey;const name=String(monster?.name||'').toLowerCase();if(name.includes('гоблин'))return'goblin';if(name.includes('волк'))return'wolf';if(name.includes('голем'))return'golem';return'slime'}
+function monsterImageKey(monster){if(['slime','goblin','wolf','golem','skeleton','bat','mushroom','bandit','wisp','spider','zombie','orc'].includes(monster?.imageKey))return monster.imageKey;const name=String(monster?.name||'').toLowerCase();if(name.includes('гоблин'))return'goblin';if(name.includes('волк'))return'wolf';if(name.includes('голем'))return'golem';return'slime'}
 function eliteColor(key){return({common:'#d8e0e8',uncommon:'#57e68a',rare:'#55a9ff',epic:'#c16aff',legendary:'#ffb84d'})[key]||'#d8e0e8'}
 function placeMonsterMarker(monster){const icon=monster.elite?L.divIcon({className:'',html:`<div class="marker enemymarker elite-monster-marker" style="--elite-color:${eliteColor(monster.eliteKey)}">👾</div>`,iconSize:[44,44],iconAnchor:[22,22]}):enemyIcon;monster.marker=L.marker(monster.pos,{icon}).addTo(map);const label=monster.elite?`<span style="color:${eliteColor(monster.eliteKey)};font-weight:900">${monster.name}</span>`:`${monster.icon} ${monster.name}`;monster.marker.bindTooltip(label,{className:monster.elite?'elite-monster-tooltip':''});monster.marker.on('click',e=>{if(e.originalEvent)L.DomEvent.stopPropagation(e.originalEvent);selectEnemy(monster)})}
 function cleanupDistantMonsters(){

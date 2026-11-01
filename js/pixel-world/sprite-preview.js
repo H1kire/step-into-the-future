@@ -1,6 +1,6 @@
-import { createCharacterSprite, getCharacterDefinitions } from "./character-sprites.js?v=pixel-atlas-6";
-import { createMonsterSprite, createNpcSprite, getMonsterDefinitions } from "./monster-sprites.js?v=pixel-atlas-6";
-import { PixelWorldRenderer, WORLD_SIZE } from "./world-renderer.js?v=pixel-atlas-6";
+import { createCharacterSprite, getCharacterDefinitions } from "./character-sprites.js?v=ambient-sheet-1";
+import { createMonsterSprite, createNpcSprite, getMonsterDefinitions } from "./monster-sprites.js?v=sprite-sheet-2";
+import { PixelWorldRenderer, WORLD_SIZE } from "./world-renderer.js?v=ambient-sheet-1";
 
 function addSpriteCard(container, name, description, sprite, kind = "character") {
   const card = document.createElement("article");
@@ -38,7 +38,9 @@ const npcGallery = document.querySelector("#npcGallery");
 for (const npc of [
   { id: "merchant", name: "Торговец", role: "Товары, снаряжение и припасы" },
   { id: "priest", name: "Священник", role: "Поддержка и восстановление" },
-  { id: "blacksmith", name: "Кузнец", role: "Ремонт и улучшение экипировки" }
+  { id: "blacksmith", name: "Кузнец", role: "Ремонт и улучшение экипировки" },
+  { id: "doctor", name: "Лекарь", role: "Лечение и помощь путникам" },
+  { id: "traveler", name: "Путник", role: "Странствующий житель мира" }
 ]) {
   addSpriteCard(npcGallery, npc.name, npc.role, createNpcSprite(npc.id), "npc");
 }

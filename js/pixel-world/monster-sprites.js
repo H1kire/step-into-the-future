@@ -1,10 +1,10 @@
-const VERSION = "pixel-atlas-3";
+const VERSION = "sprite-sheet-2";
 const monsterAtlas = new Image();
 monsterAtlas.src = new URL("../../assets/pixel-world/monsters.svg?v=" + VERSION, import.meta.url).href;
 const npcAtlas = new Image();
 npcAtlas.src = new URL("../../assets/pixel-world/npcs.svg?v=" + VERSION, import.meta.url).href;
-const MONSTERS = ["slime", "goblin", "wolf", "golem", "skeleton", "bat", "mushroom", "bandit", "wisp"];
-const NPCS = ["merchant", "priest", "blacksmith"];
+const MONSTERS = ["slime", "goblin", "wolf", "golem", "skeleton", "bat", "mushroom", "bandit", "wisp", "spider", "zombie", "orc"];
+const NPCS = ["merchant", "priest", "blacksmith", "doctor", "traveler"];
 const caches = new Map();
 function paint(canvas, kind, npc = false) {
   const atlas = npc ? npcAtlas : monsterAtlas;
@@ -46,6 +46,9 @@ export function getMonsterDefinitions() {
     { id: "bat", name: "Пещерная летучая мышь", width: 32, height: 32, threat: "Низкая" },
     { id: "mushroom", name: "Грибной страж", width: 32, height: 32, threat: "Средняя" },
     { id: "bandit", name: "Дорожный разбойник", width: 32, height: 32, threat: "Высокая" },
-    { id: "wisp", name: "Светляк-дух", width: 32, height: 32, threat: "Высокая" }
+    { id: "wisp", name: "Светляк-дух", width: 32, height: 32, threat: "Высокая" },
+    { id: "spider", name: "Пещерный паук", width: 32, height: 32, threat: "Средняя" },
+    { id: "zombie", name: "Лесной зомби", width: 32, height: 32, threat: "Средняя" },
+    { id: "orc", name: "Орк-воин", width: 32, height: 32, threat: "Высокая" }
   ];
 }
